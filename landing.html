@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduAI Pro – AI-Powered Adaptive Learning Platform</title>
+    <meta name="description" content="The world's most advanced AI-powered educational question platform with adaptive learning, smart feedback, and personalized learning paths.">
+    <link rel="stylesheet" href="platform.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Team Profile Modal Styles */
+        .team-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(13, 15, 26, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.3s ease;
+        }
+        .team-modal-overlay.active { opacity: 1; pointer-events: all; }
+        .team-modal-content {
+            background: var(--card, #1e2035); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 24px; padding: 40px 30px; max-width: 420px; width: 90%;
+            position: relative; transform: translateY(20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); overflow: hidden;
+        }
+        .team-modal-overlay.active .team-modal-content { transform: translateY(0) scale(1); }
+        .team-modal-content::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px;
+            background: linear-gradient(90deg, #6c63ff, #a855f7);
+        }
+        .team-modal-close {
+            position: absolute; top: 16px; right: 16px;
+            background: var(--bg3, #22243a); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            color: var(--text2, #9ba3c0); width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; font-size: 1rem;
+        }
+        .team-modal-close:hover {
+            background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.3);
+            transform: rotate(90deg);
+        }
+        .team-card { text-align: center; }
+        .team-avatar-wrap {
+            position: relative; width: 150px; height: 150px; margin: 0 auto 24px;
+            border-radius: 50%; padding: 5px;
+            background: linear-gradient(135deg, #6c63ff, #a855f7, #f7931e);
+            box-shadow: 0 10px 25px rgba(108, 99, 255, 0.3);
+        }
+        .team-avatar {
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+            border: 4px solid var(--card, #1e2035); background-color: var(--bg3, #22243a);
+        }
+        .team-badge {
+            position: absolute; bottom: 5px; right: 10px;
+            background: #ffd700; color: #000; width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; border: 3px solid var(--card, #1e2035);
+        }
+        .team-name {
+            font-family: 'Space Grotesk', sans-serif; font-size: 1.85rem; font-weight: 800;
+            color: var(--text, #e8eaf0); margin-bottom: 6px; letter-spacing: -0.5px;
+        }
+        .team-role {
+            font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+            background: -webkit-linear-gradient(135deg, #6c63ff, #a855f7);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 24px;
+        }
+        .team-bio p {
+            color: var(--text2, #9ba3c0); font-size: 0.98rem; line-height: 1.6; margin-bottom: 24px;
+        }
+        .team-social { display: flex; justify-content: center; gap: 12px; }
+        .social-btn {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: var(--bg3, #22243a); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            color: var(--text2, #9ba3c0); display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem; text-decoration: none; transition: all 0.2s;
+        }
+        .social-btn:hover {
+            background: rgba(108, 99, 255, 0.1); color: #6c63ff; border-color: rgba(108, 99, 255, 0.3);
+            transform: translateY(-4px); box-shadow: 0 8px 15px rgba(108, 99, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="landing-body" id="landing-page">
+
+    <!-- Navigation -->
+    <nav class="main-nav" id="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-icon"><i class="fas fa-brain"></i></div>
+                <span class="brand-name">EduAI <span class="brand-accent">Pro</span></span>
+            </div>
+            <div class="nav-links" id="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#stats" class="nav-link">Analytics</a>
+                <a href="#gamification" class="nav-link">Gamification</a>
+            </div>
+            <div class="nav-actions">
+                <button class="theme-toggle" id="theme-toggle" title="Toggle Dark Mode">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                </button>
+                <a href="auth.html" class="btn-nav-login">Login</a>
+                <a href="auth.html?mode=signup" class="btn-nav-signup">Get Started Free</a>
+                <button class="nav-hamburger" id="nav-hamburger">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-bg-animation">
+            <div class="hero-orb hero-orb-1"></div>
+            <div class="hero-orb hero-orb-2"></div>
+            <div class="hero-orb hero-orb-3"></div>
+            <div class="hero-particles" id="hero-particles"></div>
+        </div>
+
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-robot"></i>
+                <span>AI-Powered Education Platform</span>
+                <span class="badge-new">NEW</span>
+            </div>
+            <h1 class="hero-title">
+                Learn Smarter with
+                <span class="gradient-text">Adaptive AI</span>
+                Technology
+            </h1>
+            <p class="hero-subtitle">
+                The most advanced intelligent learning system that personalizes every question, 
+                adapts to your pace, and transforms your mistakes into mastery.
+            </p>
+            <div class="hero-cta">
+                <a href="auth.html?mode=signup" class="btn-hero-primary">
+                    <i class="fas fa-rocket"></i>
+                    Start Learning Free
+                </a>
+                <a href="auth.html" class="btn-hero-secondary">
+                    <i class="fas fa-play-circle"></i>
+                    Take a Demo Quiz
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="stat-num" data-target="50000">0</span>
+                    <span class="stat-label">Active Students</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-num" data-target="500">0</span>
+                    <span class="stat-label">Questions</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-num" data-target="98">0</span>
+                    <span class="stat-label">% Satisfaction</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="hero-dashboard-preview">
+                <div class="preview-header">
+                    <span class="preview-dot red"></span>
+                    <span class="preview-dot yellow"></span>
+                    <span class="preview-dot green"></span>
+                    <span class="preview-title">AI Learning Dashboard</span>
+                </div>
+                <div class="preview-body">
+                    <div class="preview-question-card">
+                        <div class="preview-q-badge"><i class="fas fa-brain"></i> AI Generated</div>
+                        <p class="preview-q-text">What is the primary benefit of virtual environments in Python development?</p>
+                        <div class="preview-options">
+                            <div class="preview-option correct">
+                                <span class="prev-letter">A</span>
+                                <span>Package isolation per project</span>
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="preview-option">
+                                <span class="prev-letter">B</span>
+                                <span>Faster CPU processing</span>
+                            </div>
+                            <div class="preview-option">
+                                <span class="prev-letter">C</span>
+                                <span>Better display quality</span>
+                            </div>
+                        </div>
+                        <div class="preview-ai-feedback">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Tutor: Great! Package isolation prevents dependency conflicts between projects. Next up: Advanced level question!</span>
+                        </div>
+                    </div>
+                    <div class="preview-stats-row">
+                        <div class="prev-stat-item">
+                            <i class="fas fa-fire" style="color:#f7931e"></i>
+                            <span>12 Streak</span>
+                        </div>
+                        <div class="prev-stat-item">
+                            <i class="fas fa-star" style="color:#ffd700"></i>
+                            <span>2,840 XP</span>
+                        </div>
+                        <div class="prev-stat-item">
+                            <i class="fas fa-chart-line" style="color:#6c63ff"></i>
+                            <span>87% Score</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="section-container">
+            <div class="section-header-text">
+                <div class="section-badge"><i class="fas fa-sparkles"></i> Core Features</div>
+                <h2 class="section-title">Everything You Need to <span class="gradient-text">Excel</span></h2>
+                <p class="section-subtitle">A complete ecosystem of intelligent tools designed to maximize your learning potential</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card feature-card-large">
+                    <div class="feature-icon-wrap" style="background: linear-gradient(135deg,#6c63ff,#a855f7)">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Adaptive Learning Engine</h3>
+                    <p>AI continuously analyses your performance and adjusts question difficulty in real-time. Answer correctly → harder questions. Struggle → supportive easier content with explanations.</p>
+                    <div class="feature-tags">
+                        <span class="f-tag">Real-time Adaptation</span>
+                        <span class="f-tag">Personalized Path</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-wrap" style="background: linear-gradient(135deg,#f7931e,#f44336)">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI Tutor</h3>
+                    <p>Get instant, detailed explanations from your personal AI tutor after every question.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-wrap" style="background: linear-gradient(135deg,#11998e,#38ef7d)">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Analytics Dashboard</h3>
+                    <p>Track your progress, identify weak topics, and measure improvement over time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-wrap" style="background: linear-gradient(135deg,#4facfe,#00f2fe)">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3>Code Editor</h3>
+                    <p>Built-in coding environment with live evaluation for programming questions.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-wrap" style="background: linear-gradient(135deg,#f093fb,#f5576c)">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3>Gamification</h3>
+                    <p>Earn XP, unlock achievements, and compete on global leaderboards.</p>
+                </div>
+                <div class="feature-card feature-card-large">
+                    <div class="feature-icon-wrap" style="background: linear-gradient(135deg,#fa709a,#fee140)">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h3>8 Question Types</h3>
+                    <p>Multiple Choice, Fill in the Blank, Coding, Essays, Drag & Drop, Matching, Case Studies, and Simulations — all powered by AI-generated content.</p>
+                    <div class="feature-tags">
+                        <span class="f-tag">MCQ</span>
+                        <span class="f-tag">Fill-in-Blank</span>
+                        <span class="f-tag">Coding</span>
+                        <span class="f-tag">Essay</span>
+                        <span class="f-tag">Drag & Drop</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works-section" id="how-it-works">
+        <div class="section-container">
+            <div class="section-header-text">
+                <div class="section-badge"><i class="fas fa-route"></i> Learning Journey</div>
+                <h2 class="section-title">How <span class="gradient-text">EduAI Pro</span> Works</h2>
+                <p class="section-subtitle">Your personalized learning path begins from the first question</p>
+            </div>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-icon"><i class="fas fa-user-plus"></i></div>
+                    <h3>Create Your Profile</h3>
+                    <p>Sign up and take a quick diagnostic test to determine your starting level across all topics.</p>
+                </div>
+                <div class="step-connector"><i class="fas fa-chevron-right"></i></div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-icon"><i class="fas fa-route"></i></div>
+                    <h3>Get Your Learning Path</h3>
+                    <p>AI generates a personalized curriculum based on your diagnostic results and goals.</p>
+                </div>
+                <div class="step-connector"><i class="fas fa-chevron-right"></i></div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-icon"><i class="fas fa-brain"></i></div>
+                    <h3>Adaptive Practice</h3>
+                    <p>Answer diverse question types. The AI adapts difficulty and provides instant smart feedback.</p>
+                </div>
+                <div class="step-connector"><i class="fas fa-chevron-right"></i></div>
+                <div class="step-card">
+                    <div class="step-number">04</div>
+                    <div class="step-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>Track & Improve</h3>
+                    <p>Monitor your progress with detailed analytics and celebrate milestones with achievements.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="platform-stats-section" id="stats">
+        <div class="stats-bg-glow"></div>
+        <div class="section-container">
+            <div class="section-header-text">
+                <div class="section-badge"><i class="fas fa-chart-pie"></i> Platform Analytics</div>
+                <h2 class="section-title">Proven <span class="gradient-text">Results</span></h2>
+            </div>
+            <div class="big-stats-grid">
+                <div class="big-stat-card">
+                    <div class="big-stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="big-stat-num">50K+</div>
+                    <div class="big-stat-label">Active Learners</div>
+                    <div class="big-stat-bar"><div class="big-stat-fill" style="width:85%"></div></div>
+                </div>
+                <div class="big-stat-card">
+                    <div class="big-stat-icon"><i class="fas fa-question-circle"></i></div>
+                    <div class="big-stat-num">500+</div>
+                    <div class="big-stat-label">Questions in Bank</div>
+                    <div class="big-stat-bar"><div class="big-stat-fill" style="width:70%"></div></div>
+                </div>
+                <div class="big-stat-card highlight-stat">
+                    <div class="big-stat-icon"><i class="fas fa-star"></i></div>
+                    <div class="big-stat-num">98%</div>
+                    <div class="big-stat-label">Student Satisfaction</div>
+                    <div class="big-stat-bar"><div class="big-stat-fill" style="width:98%"></div></div>
+                </div>
+                <div class="big-stat-card">
+                    <div class="big-stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="big-stat-num">2.4M</div>
+                    <div class="big-stat-label">Study Hours Logged</div>
+                    <div class="big-stat-bar"><div class="big-stat-fill" style="width:92%"></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gamification Section -->
+    <section class="gamification-section" id="gamification">
+        <div class="section-container">
+            <div class="section-header-text">
+                <div class="section-badge"><i class="fas fa-gamepad"></i> Gamification</div>
+                <h2 class="section-title">Learning Made <span class="gradient-text">Fun</span></h2>
+                <p class="section-subtitle">Stay motivated with a comprehensive reward system designed to keep you engaged</p>
+            </div>
+            <div class="gamification-grid">
+                <div class="gamif-card">
+                    <div class="gamif-icon xp-icon"><i class="fas fa-bolt"></i></div>
+                    <h3>XP Points</h3>
+                    <p>Earn experience points for every correct answer, streak, and achievement.</p>
+                    <div class="gamif-preview">
+                        <div class="xp-bar-wrap">
+                            <div class="xp-bar-fill" style="width: 68%"></div>
+                        </div>
+                        <span>2,840 / 4,000 XP</span>
+                    </div>
+                </div>
+                <div class="gamif-card">
+                    <div class="gamif-icon badge-icon"><i class="fas fa-medal"></i></div>
+                    <h3>Achievement Badges</h3>
+                    <p>Unlock unique badges as you master topics and hit milestones.</p>
+                    <div class="badge-showcase">
+                        <span class="badge-mini" title="First Quiz"><i class="fas fa-star"></i></span>
+                        <span class="badge-mini" title="10 Streak"><i class="fas fa-fire"></i></span>
+                        <span class="badge-mini locked" title="Perfect Score"><i class="fas fa-crown"></i></span>
+                        <span class="badge-mini locked" title="Code Master"><i class="fas fa-code"></i></span>
+                        <span class="badge-mini locked" title="Speed Demon"><i class="fas fa-bolt"></i></span>
+                    </div>
+                </div>
+                <div class="gamif-card">
+                    <div class="gamif-icon streak-icon"><i class="fas fa-fire"></i></div>
+                    <h3>Learning Streaks</h3>
+                    <p>Build daily streaks and maintain your momentum with streak bonuses.</p>
+                    <div class="streak-preview">
+                        <div class="streak-day active"><span>M</span></div>
+                        <div class="streak-day active"><span>T</span></div>
+                        <div class="streak-day active"><span>W</span></div>
+                        <div class="streak-day active"><span>T</span></div>
+                        <div class="streak-day active"><span>F</span></div>
+                        <div class="streak-day"><span>S</span></div>
+                        <div class="streak-day"><span>S</span></div>
+                    </div>
+                </div>
+                <div class="gamif-card">
+                    <div class="gamif-icon leaderboard-icon"><i class="fas fa-trophy"></i></div>
+                    <h3>Leaderboards</h3>
+                    <p>Compete with classmates and students worldwide for the top spot.</p>
+                    <div class="mini-leaderboard">
+                        <div class="lb-row gold"><span class="lb-rank">🥇</span><span class="lb-name">Ahmed M.</span><span class="lb-xp">4,200 XP</span></div>
+                        <div class="lb-row silver"><span class="lb-rank">🥈</span><span class="lb-name">Sara K.</span><span class="lb-xp">3,840 XP</span></div>
+                        <div class="lb-row bronze"><span class="lb-rank">🥉</span><span class="lb-name">You</span><span class="lb-xp">2,840 XP</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-bg-animation">
+            <div class="cta-orb cta-orb-1"></div>
+            <div class="cta-orb cta-orb-2"></div>
+        </div>
+        <div class="section-container">
+            <div class="cta-content">
+                <h2>Ready to Transform Your Learning?</h2>
+                <p>Join thousands of students already experiencing the future of education</p>
+                <div class="cta-buttons">
+                    <a href="auth.html?mode=signup" class="btn-cta-primary">
+                        <i class="fas fa-rocket"></i> Start Learning Now – It's Free
+                    </a>
+                    <button onclick="openTeamModal()" class="btn-cta-secondary" style="border:none; cursor:pointer; font-family:inherit;">
+                        <i class="fas fa-user-tie"></i> View Team Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="brand-icon"><i class="fas fa-brain"></i></div>
+                <span>EduAI <strong>Pro</strong></span>
+            </div>
+            <p class="footer-tagline">Intelligent Learning for a Smarter Future</p>
+            <div class="footer-links">
+                <a href="questions.html">Classic Quiz</a>
+                <a href="auth.html">Login</a>
+                <a href="auth.html?mode=signup">Sign Up</a>
+                <a href="dashboard.html">Dashboard</a>
+            </div>
+            <p class="footer-copy">© 2026 EduAI Pro. All rights reserved. Built with AI ❤️</p>
+        </div>
+    </footer>
+
+    <!-- Team Modal -->
+    <div class="team-modal-overlay" id="team-modal">
+        <div class="team-modal-content">
+            <button class="team-modal-close" onclick="closeTeamModal()"><i class="fas fa-times"></i></button>
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-avatar-wrap">
+                        <img src="ahmed-mukhtar.png" alt="Ahmed Mukhtar" class="team-avatar" onerror="this.src='https://ui-avatars.com/api/?name=Ahmed+Mukhtar&background=6c63ff&color=fff&size=150'">
+                        <div class="team-badge"><i class="fas fa-crown"></i></div>
+                    </div>
+                    <h2 class="team-name">Ahmed Mukhtar</h2>
+                    <p class="team-role">Founder & Visionary</p>
+                </div>
+                <div class="team-bio">
+                    <p>Building the future of artificial intelligence in education. Dedicated to creating adaptive platforms that transform how the world learns.</p>
+                </div>
+                <div class="team-social">
+                    <a href="#" class="social-btn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="social-btn"><i class="fab fa-github"></i></a>
+                    <a href="#" class="social-btn"><i class="fas fa-globe"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="platform.js"></script>
+    <script>
+        function openTeamModal() {
+            document.getElementById('team-modal').classList.add('active');
+        }
+        function closeTeamModal() {
+            document.getElementById('team-modal').classList.remove('active');
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('team-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTeamModal();
+            }
+        });
+        // Animate hero stats
+        function animateCount(el) {
+            const target = parseInt(el.dataset.target);
+            let current = 0;
+            const step = Math.ceil(target / 80);
+            const timer = setInterval(() => {
+                current = Math.min(current + step, target);
+                el.textContent = current.toLocaleString();
+                if (current >= target) clearInterval(timer);
+            }, 20);
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.querySelectorAll('.stat-num').forEach(animateCount);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        const heroStats = document.querySelector('.hero-stats');
+        if (heroStats) observer.observe(heroStats);
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('main-nav');
+            if (window.scrollY > 50) nav.classList.add('nav-scrolled');
+            else nav.classList.remove('nav-scrolled');
+        });
+
+        // Hamburger menu
+        document.getElementById('nav-hamburger').addEventListener('click', () => {
+            document.getElementById('nav-links').classList.toggle('nav-open');
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

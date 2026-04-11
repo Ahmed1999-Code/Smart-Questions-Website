@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Results – EduAI Pro</title>
+    <link rel="stylesheet" href="platform.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Enhanced Results Page Styles */
+        body { font-family: 'Inter', sans-serif; background: var(--bg, #0d0f1a); min-height: 100vh; padding: 0; margin: 0; }
+        .enhanced-results-page { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+
+        /* Header */
+        .results-top-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 32px; flex-wrap: wrap; gap: 12px;
+        }
+        .results-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .results-logo .brand-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg,#6c63ff,#a855f7); display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem; }
+        .results-logo span { font-weight: 800; font-size: 1.1rem; color: var(--text, #e8eaf0); }
+        .results-nav-actions { display: flex; gap: 10px; }
+        .results-nav-btn {
+            padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+            text-decoration: none; border: 1.5px solid var(--border, rgba(255,255,255,0.08));
+            background: var(--card, #1e2035); color: var(--text2, #9ba3c0);
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .results-nav-btn:hover { border-color: #6c63ff; color: #6c63ff; }
+        .results-nav-btn.primary { background: linear-gradient(135deg,#6c63ff,#a855f7); color: white; border-color: transparent; }
+        .results-nav-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(108,99,255,0.4); }
+
+        /* Score Hero */
+        .score-hero {
+            background: var(--card, #1e2035); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 28px; padding: 48px; text-align: center;
+            margin-bottom: 28px; position: relative; overflow: hidden;
+        }
+        .score-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #6c63ff, #a855f7, #f7931e, #22c55e); background-size: 200% 100%; animation: gradShift 4s ease infinite; }
+        @keyframes gradShift { 0%,100%{background-position:0% 50%} 50%{background-position:100%} }
+        .score-emoji { font-size: 4rem; display: block; margin-bottom: 12px; animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes bounce-in { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+        .score-title { font-size: 2rem; font-weight: 900; margin-bottom: 8px; color: var(--text, #e8eaf0); }
+        .score-subtitle { color: var(--text2, #9ba3c0); font-size: 1rem; margin-bottom: 32px; }
+
+        .score-circle-row { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; margin-bottom: 32px; }
+        .score-circle {
+            position: relative; width: 140px; height: 140px;
+        }
+        .score-circle svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+        .sc-track { fill: none; stroke: var(--bg3, #22243a); stroke-width: 10; }
+        .sc-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1.5s ease; }
+        .sc-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .sc-num { font-size: 1.5rem; font-weight: 900; color: var(--text, #e8eaf0); }
+        .sc-sub { font-size: 0.65rem; color: var(--text3, #6b7299); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .grade-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 70px; height: 70px; border-radius: 20px;
+            font-size: 1.8rem; font-weight: 900; font-family: 'Space Grotesk', sans-serif;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4); margin: 0 auto;
+        }
+
+        /* XP Earned Card */
+        .xp-earned-card {
+            background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(168,85,247,0.1));
+            border: 1.5px solid rgba(108,99,255,0.25);
+            border-radius: 20px; padding: 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+        }
+        .xp-earned-left { display: flex; align-items: center; gap: 14px; }
+        .xp-earned-icon { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg,#6c63ff,#a855f7); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: white; }
+        .xp-earned-main { font-size: 1.8rem; font-weight: 900; color: #a855f7; }
+        .xp-earned-label { font-size: 0.85rem; color: var(--text2, #9ba3c0); margin-top: 2px; }
+        .xp-breakdown { display: flex; flex-direction: column; gap: 6px; }
+        .xp-line { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text2, #9ba3c0); }
+        .xp-line i { width: 16px; color: #6c63ff; }
+        .xp-earned-right { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .new-badges-wrap { display: flex; gap: 8px; }
+        .new-badge { width: 44px; height: 44px; border-radius: 12px; border: 2px solid rgba(108,99,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; animation: bounce-in 0.5s ease; }
+
+        /* Stats Grid */
+        .results-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+        @media (max-width: 700px) { .results-stats-grid { grid-template-columns: 1fr 1fr; } }
+        .results-stat-card {
+            background: var(--card, #1e2035); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 16px; padding: 20px; text-align: center; transition: all 0.2s;
+        }
+        .results-stat-card:hover { transform: translateY(-3px); }
+        .rs-icon { font-size: 1.5rem; margin-bottom: 8px; display: block; }
+        .rs-num { font-size: 1.5rem; font-weight: 800; display: block; margin-bottom: 4px; }
+        .rs-label { font-size: 0.75rem; color: var(--text3, #6b7299); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Adaptive Summary */
+        .adaptive-summary {
+            background: var(--card, #1e2035); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 20px; padding: 24px; margin-bottom: 28px;
+        }
+        .adaptive-summary h3 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .adaptive-summary h3 i { color: #6c63ff; }
+        .adaptive-journey { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .aj-step {
+            display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+            border-radius: 10px; font-size: 0.8rem; font-weight: 600;
+            background: var(--bg3, #22243a); border: 1px solid var(--border, rgba(255,255,255,0.08));
+        }
+        .aj-step.start { border-color: rgba(34,197,94,0.3); color: #22c55e; }
+        .aj-step.peak { border-color: rgba(168,85,247,0.3); color: #a855f7; }
+        .aj-arrow { color: var(--text3, #6b7299); font-size: 0.8rem; }
+        .ai-rec-results {
+            margin-top: 16px; padding: 14px; border-radius: 12px;
+            background: rgba(108,99,255,0.06); border: 1px solid rgba(108,99,255,0.15);
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .ai-rec-results i { color: #6c63ff; flex-shrink: 0; margin-top: 2px; }
+        .ai-rec-results p { font-size: 0.88rem; color: var(--text2, #9ba3c0); line-height: 1.6; }
+
+        /* Performance Chart (topic breakdown) */
+        .performance-section {
+            background: var(--card, #1e2035); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 20px; padding: 24px; margin-bottom: 28px;
+        }
+        .performance-section h3 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+        .performance-section h3 i { color: #6c63ff; }
+        .perf-bars { display: flex; flex-direction: column; gap: 14px; }
+        .perf-bar-row { display: flex; flex-direction: column; gap: 6px; }
+        .perf-bar-meta { display: flex; justify-content: space-between; font-size: 0.85rem; }
+        .perf-bar-name { font-weight: 600; color: var(--text, #e8eaf0); }
+        .perf-bar-pct { font-weight: 700; }
+        .perf-bar-track { height: 8px; background: var(--bg3, #22243a); border-radius: 8px; overflow: hidden; }
+        .perf-bar-fill { height: 100%; border-radius: 8px; transition: width 1.2s ease; }
+
+        /* Review Section */
+        .review-section {
+            background: var(--card, #1e2035); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 20px; overflow: hidden; margin-bottom: 28px;
+        }
+        .review-section-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .review-section-header h3 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .review-section-header h3 i { color: #ef4444; }
+        .review-filter-tabs { display: flex; gap: 8px; }
+        .filter-tab {
+            padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+            background: var(--bg3, #22243a); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            color: var(--text2, #9ba3c0); cursor: pointer; transition: all 0.2s;
+        }
+        .filter-tab.active { background: rgba(108,99,255,0.15); border-color: rgba(108,99,255,0.3); color: #6c63ff; }
+        .review-items-list { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .review-item-enhanced {
+            background: var(--bg3, #22243a); border: 1px solid var(--border, rgba(255,255,255,0.08));
+            border-radius: 14px; overflow: hidden; transition: all 0.2s; cursor: pointer;
+        }
+        .review-item-enhanced:hover { border-color: rgba(108,99,255,0.25); }
+        .review-item-enhanced.correct-item-e { border-left: 4px solid #22c55e; }
+        .review-item-enhanced.wrong-item-e { border-left: 4px solid #ef4444; }
+        .review-item-enhanced.skip-item-e { border-left: 4px solid #f59e0b; }
+        .ri-header {
+            padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+            justify-content: space-between;
+        }
+        .ri-header-left { display: flex; align-items: center; gap: 10px; }
+        .ri-num { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: white; flex-shrink: 0; }
+        .ri-num.correct { background: #22c55e; }
+        .ri-num.wrong { background: #ef4444; }
+        .ri-num.skip { background: #f59e0b; }
+        .ri-question-text { font-size: 0.88rem; font-weight: 600; color: var(--text, #e8eaf0); flex: 1; }
+        .ri-expand-icon { color: var(--text3, #6b7299); font-size: 0.8rem; transition: transform 0.2s; }
+        .ri-expanded .ri-expand-icon { transform: rotate(180deg); }
+        .ri-details { display: none; padding: 12px 16px; border-top: 1px solid var(--border, rgba(255,255,255,0.08)); background: var(--card, #1e2035); }
+        .ri-expanded .ri-details { display: flex; flex-direction: column; gap: 10px; }
+        .ri-answer-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; }
+        .ri-answer-row.your-answer { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
+        .ri-answer-row.correct-answer { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+        .ri-answer-row.correct-own { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+        .ri-answer-letter { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; color: white; flex-shrink: 0; }
+        .your-answer .ri-answer-letter { background: #ef4444; }
+        .correct-answer .ri-answer-letter { background: #22c55e; }
+        .correct-own .ri-answer-letter { background: #22c55e; }
+        .ri-answer-text { font-size: 0.85rem; color: var(--text2, #9ba3c0); flex: 1; line-height: 1.5; }
+        .ri-ai-explanation { background: rgba(108,99,255,0.06); border: 1px solid rgba(108,99,255,0.15); border-radius: 10px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
+        .ri-ai-explanation i { color: #6c63ff; flex-shrink: 0; font-size: 0.85rem; margin-top: 2px; }
+        .ri-ai-explanation p { font-size: 0.8rem; color: var(--text2, #9ba3c0); line-height: 1.6; }
+
+        /* Congratulatory Footer */
+        .results-footer-msg {
+            background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(78,205,196,0.08));
+            border: 1.5px solid rgba(34,197,94,0.2); border-radius: 20px; padding: 32px;
+            text-align: center;
+        }
+        .results-footer-msg i { font-size: 2.5rem; color: #22c55e; margin-bottom: 12px; display: block; }
+        .arabic-msg { font-size: 1.4rem; font-weight: 700; direction: rtl; color: var(--text, #e8eaf0); margin-bottom: 8px; line-height: 1.8; }
+        .english-msg { font-size: 0.9rem; color: var(--text2, #9ba3c0); font-style: italic; }
+
+        /* Empty state */
+        .no-results { text-align: center; padding: 80px 20px; color: var(--text2, #9ba3c0); }
+        .no-results i { font-size: 3rem; margin-bottom: 16px; display: block; color: var(--text3, #6b7299); }
+    </style>
+</head>
+<body>
+
+<div class="enhanced-results-page">
+
+    <!-- Top Bar -->
+    <div class="results-top-bar">
+        <a href="landing.html" class="results-logo">
+            <div class="brand-icon"><i class="fas fa-brain"></i></div>
+            <span>EduAI <strong>Pro</strong></span>
+        </a>
+        <div class="results-nav-actions">
+            <button class="theme-toggle" id="theme-toggle" title="Toggle Dark Mode">
+                <i class="fas fa-moon" id="theme-icon"></i>
+            </button>
+            <button class="results-nav-btn" onclick="window.location.href='dashboard.html'">
+                <i class="fas fa-th-large"></i> Dashboard
+            </button>
+            <button class="results-nav-btn primary" id="retry-btn" onclick="retryQuiz()">
+                <i class="fas fa-redo"></i> Try Again
+            </button>
+        </div>
+    </div>
+
+    <div id="results-main-content">
+        <!-- filled by JS -->
+    </div>
+
+</div>
+
+<script src="questions.js"></script>
+<script src="platform.js"></script>
+<script>
+// ================================================
+// ENHANCED RESULTS PAGE ENGINE
+// ================================================
+
+function loadResults() {
+    // Try adaptive results first, then classic
+    let data = null;
+    const stored = sessionStorage.getItem('quizResults');
+    if (stored) data = JSON.parse(stored);
+    if (!data) {
+        const local = localStorage.getItem('latestQuizResults');
+        if (local) data = JSON.parse(local);
+    }
+
+    const container = document.getElementById('results-main-content');
+    if (!data) {
+        container.innerHTML = `<div class="no-results">
+            <i class="fas fa-clipboard-list"></i>
+            <h3>No results found</h3>
+            <p>Complete a quiz to see your results here.</p>
+            <br>
+            <a href="dashboard.html" style="color:#6c63ff;font-weight:600;">Go to Dashboard →</a>
+        </div>`;
+        return;
+    }
+
+    const { score, totalQuestions, userAnswers, studentName, xpEarned, maxStreak, timeTaken, hintsUsed, skipsUsed, adaptiveMode } = data;
+    const pct = Math.round((score / totalQuestions) * 100);
+    const grade = EduAI.getGrade(pct);
+
+    // Calculate XP
+    const earnedXP = xpEarned || EduAI.calculateXP(score, totalQuestions, maxStreak || 0, hintsUsed || 0, timeTaken || 0);
+
+    // Determine emoji & message
+    const getEmoji = (p) => {
+        if (p === 100) return '🏆';
+        if (p >= 85) return '🎯';
+        if (p >= 70) return '⭐';
+        if (p >= 50) return '💪';
+        return '📚';
+    };
+    const getMsg = (p) => {
+        if (p === 100) return 'Perfect Score! Absolutely Outstanding!';
+        if (p >= 85) return 'Excellent Performance! Keep it up!';
+        if (p >= 70) return 'Great Work! You\'re making real progress!';
+        if (p >= 50) return 'Good Effort! Review your mistakes and try again!';
+        return 'Keep Practicing! Every expert was once a beginner!';
+    };
+
+    // Circumference = 2π×42 ≈ 264
+    const circ = 264;
+    const pctOffset = circ - (pct / 100) * circ;
+    const scoreOffset = circ - (score / totalQuestions) * circ;
+    const timeOffset = circ - Math.min((timeTaken || 0) / 1800, 1) * circ; // max 30 min
+
+    // New badges earned
+    const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
+    const newBadges = [];
+    if (pct === 100) newBadges.push({ id:'perfect', icon:'fa-crown', color:'#a855f7' });
+    if ((maxStreak || 0) >= 5) newBadges.push({ id:'streak_5', icon:'fa-fire', color:'#f7931e' });
+    if (!user.badges || !user.badges.includes('first_quiz')) newBadges.push({ id:'first_quiz', icon:'fa-star', color:'#ffd700' });
+
+    // Topic performance (simulated based on Q buckets)
+    const topicPcts = simulateTopicPerformance(userAnswers);
+
+    // Update user XP in localStorage
+    if (user) {
+        user.xp = (user.xp || 0) + earnedXP;
+        if (!user.badges) user.badges = [];
+        newBadges.forEach(b => { if (!user.badges.includes(b.id)) user.badges.push(b.id); });
+        localStorage.setItem('eduai_current_user', JSON.stringify(user));
+    }
+
+    // Render
+    container.innerHTML = renderResults(data, pct, grade, getEmoji(pct), getMsg(pct), earnedXP, newBadges, circ, pctOffset, topicPcts, userAnswers);
+
+    // Animate circles
+    setTimeout(() => {
+        const fills = document.querySelectorAll('.sc-fill');
+        fills.forEach(f => { f.style.strokeDashoffset = f.dataset.offset; });
+    }, 200);
+
+    // Confetti for high scores
+    if (pct >= 90) {
+        setTimeout(() => EduAI.launchConfetti(), 500);
+    }
+
+    // Show new badge earned toast
+    if (newBadges.length > 0) {
+        setTimeout(() => {
+            EduAI.showToast(`🏅 New badge unlocked: ${newBadges[0].id.replace('_', ' ')}!`, 'success', 4000);
+        }, 1500);
+    }
+}
+
+function simulateTopicPerformance(answers) {
+    if (!answers || answers.length === 0) return [];
+    const topics = ['Virtual Environments', 'Package Management', 'pip Commands', 'Conda & Pipenv', 'Advanced Configs'];
+    return topics.map((t, i) => {
+        const slice = answers.slice(Math.floor(i * answers.length / topics.length), Math.floor((i+1) * answers.length / topics.length));
+        if (slice.length === 0) return { name: t, pct: 0 };
+        const correct = slice.filter(a => a.isCorrect).length;
+        return { name: t, pct: Math.round((correct / slice.length) * 100) };
+    }).filter(t => t.pct !== undefined);
+}
+
+function getBarColor(pct) {
+    if (pct >= 80) return 'linear-gradient(90deg, #22c55e, #10b981)';
+    if (pct >= 60) return 'linear-gradient(90deg, #f7931e, #ffd700)';
+    return 'linear-gradient(90deg, #ef4444, #f7931e)';
+}
+
+function renderResults(data, pct, grade, emoji, msg, earnedXP, newBadges, circ, pctOffset, topicPcts, userAnswers) {
+    const { score, totalQuestions, studentName, maxStreak, timeTaken, hintsUsed, skipsUsed, adaptiveMode } = data;
+    const incorrect = userAnswers ? userAnswers.filter(a => !a.isCorrect) : [];
+    const correct = userAnswers ? userAnswers.filter(a => a.isCorrect) : [];
+
+    return `
+    <!-- Score Hero -->
+    <div class="score-hero">
+        <span class="score-emoji">${emoji}</span>
+        <h1 class="score-title">${msg}</h1>
+        <p class="score-subtitle">${studentName || 'Student'} · ${new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'})}</p>
+
+        <div class="score-circle-row">
+            <div>
+                <div class="score-circle">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="sc-track" cx="50" cy="50" r="42"/>
+                        <circle class="sc-fill" cx="50" cy="50" r="42"
+                            stroke="${pct >= 80 ? '#22c55e' : pct >= 60 ? '#f7931e' : '#ef4444'}"
+                            stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+                            data-offset="${pctOffset}"/>
+                    </svg>
+                    <div class="sc-label">
+                        <span class="sc-num">${pct}%</span>
+                        <span class="sc-sub">Score</span>
+                    </div>
+                </div>
+                <div style="text-align:center;margin-top:8px;font-size:0.78rem;color:var(--text3); font-weight:600;">ACCURACY</div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+                <div class="grade-badge" style="background:${grade.color}20;border:3px solid ${grade.color};color:${grade.color};">
+                    ${grade.label}
+                </div>
+                <div style="text-align:center;font-size:0.78rem;color:var(--text3);font-weight:600;">GRADE</div>
+            </div>
+
+            <div>
+                <div class="score-circle">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="sc-track" cx="50" cy="50" r="42"/>
+                        <circle class="sc-fill" cx="50" cy="50" r="42"
+                            stroke="#6c63ff"
+                            stroke-dasharray="${circ}" stroke-dashoffset="${circ}"
+                            data-offset="${circ - (score/totalQuestions)*circ}"/>
+                    </svg>
+                    <div class="sc-label">
+                        <span class="sc-num">${score}/${totalQuestions}</span>
+                        <span class="sc-sub">Correct</span>
+                    </div>
+                </div>
+                <div style="text-align:center;margin-top:8px;font-size:0.78rem;color:var(--text3);font-weight:600;">QUESTIONS</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- XP Earned -->
+    <div class="xp-earned-card">
+        <div class="xp-earned-left">
+            <div class="xp-earned-icon"><i class="fas fa-bolt"></i></div>
+            <div>
+                <div class="xp-earned-main">+${earnedXP} XP</div>
+                <div class="xp-earned-label">Experience Points Earned</div>
+            </div>
+        </div>
+        <div class="xp-breakdown">
+            <div class="xp-line"><i class="fas fa-check-circle" style="color:#22c55e"></i> ${score} correct × 10 = <strong>+${score * 10} XP</strong></div>
+            ${(maxStreak || 0) >= 5 ? `<div class="xp-line"><i class="fas fa-fire" style="color:#f7931e"></i> Streak bonus: <strong>+25 XP</strong></div>` : ''}
+            ${pct === 100 ? `<div class="xp-line"><i class="fas fa-star" style="color:#ffd700"></i> Perfect score bonus: <strong>+50 XP</strong></div>` : ''}
+            ${(hintsUsed || 0) === 0 ? `<div class="xp-line"><i class="fas fa-lightbulb"></i> No hints used: <strong>+15 XP</strong></div>` : ''}
+        </div>
+        ${newBadges.length > 0 ? `
+        <div class="xp-earned-right">
+            <div style="font-size:0.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">New Badges!</div>
+            <div class="new-badges-wrap">
+                ${newBadges.map(b => `<div class="new-badge" style="background:linear-gradient(135deg,${b.color},${b.color}99)"><i class="fas ${b.icon}"></i></div>`).join('')}
+            </div>
+        </div>` : ''}
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="results-stats-grid">
+        <div class="results-stat-card">
+            <span class="rs-icon" style="color:#22c55e">✅</span>
+            <span class="rs-num" style="color:#22c55e">${score}</span>
+            <span class="rs-label">Correct</span>
+        </div>
+        <div class="results-stat-card">
+            <span class="rs-icon" style="color:#ef4444">❌</span>
+            <span class="rs-num" style="color:#ef4444">${incorrect.length}</span>
+            <span class="rs-label">Wrong</span>
+        </div>
+        <div class="results-stat-card">
+            <span class="rs-icon" style="color:#f7931e">🔥</span>
+            <span class="rs-num" style="color:#f7931e">${maxStreak || 0}</span>
+            <span class="rs-label">Best Streak</span>
+        </div>
+        <div class="results-stat-card">
+            <span class="rs-icon" style="color:#6c63ff">⏱️</span>
+            <span class="rs-num" style="color:#6c63ff">${EduAI.formatTime(timeTaken || 0)}</span>
+            <span class="rs-label">Time Taken</span>
+        </div>
+    </div>
+
+    ${adaptiveMode ? `
+    <!-- Adaptive Summary -->
+    <div class="adaptive-summary">
+        <h3><i class="fas fa-brain"></i> Adaptive Learning Summary</h3>
+        <div class="adaptive-journey">
+            <div class="aj-step start"><i class="fas fa-seedling"></i> Started: Beginner</div>
+            <span class="aj-arrow"><i class="fas fa-chevron-right"></i></span>
+            <div class="aj-step"><i class="fas fa-signal"></i> Adapted: ${totalQuestions} questions</div>
+            <span class="aj-arrow"><i class="fas fa-chevron-right"></i></span>
+            <div class="aj-step peak"><i class="fas fa-crown"></i> Peak: ${pct >= 80 ? 'Advanced' : pct >= 60 ? 'Intermediate' : 'Beginner'}</div>
+        </div>
+        <div class="ai-rec-results">
+            <i class="fas fa-robot"></i>
+            <p>
+                ${pct >= 80 ? `🎯 <strong>Excellent adaptive performance!</strong> The AI pushed you to <strong>${pct >= 90 ? 'Expert' : 'Advanced'}</strong> level questions. Focus next on: <strong>${topicPcts.sort((a,b)=>a.pct-b.pct)[0]?.name || 'Advanced topics'}</strong> to continue growing.`
+                : pct >= 60 ? `📈 <strong>Good progress!</strong> The AI identified areas where you need more practice. Recommended: spend more time on <strong>${topicPcts.sort((a,b)=>a.pct-b.pct)[0]?.name || 'weak topics'}</strong>.`
+                : `📚 <strong>Keep going!</strong> The AI detected that you're still building your foundation. Review the basics and try again — consistency is key!`}
+            </p>
+        </div>
+    </div>` : ''}
+
+    <!-- Topic Performance -->
+    <div class="performance-section">
+        <h3><i class="fas fa-chart-bar"></i> Topic Performance Breakdown</h3>
+        <div class="perf-bars">
+            ${topicPcts.map(t => `
+            <div class="perf-bar-row">
+                <div class="perf-bar-meta">
+                    <span class="perf-bar-name">${t.name}</span>
+                    <span class="perf-bar-pct" style="color:${t.pct >= 80 ? '#22c55e' : t.pct >= 60 ? '#f7931e' : '#ef4444'}">${t.pct}%</span>
+                </div>
+                <div class="perf-bar-track">
+                    <div class="perf-bar-fill" style="width:${t.pct}%;background:${getBarColor(t.pct)}"></div>
+                </div>
+            </div>`).join('')}
+        </div>
+    </div>
+
+    <!-- Answer Review -->
+    <div class="review-section">
+        <div class="review-section-header">
+            <h3><i class="fas fa-clipboard-check"></i> Answer Review (${userAnswers ? userAnswers.length : 0} questions)</h3>
+            <div class="review-filter-tabs">
+                <button class="filter-tab active" onclick="filterReview('all', this)">All</button>
+                <button class="filter-tab" onclick="filterReview('wrong', this)">Wrong (${incorrect.length})</button>
+                <button class="filter-tab" onclick="filterReview('correct', this)">Correct (${correct.length})</button>
+            </div>
+        </div>
+        <div class="review-items-list" id="review-items-list">
+            ${userAnswers ? userAnswers.map((a, i) => renderReviewItem(a, i)).join('') : '<p style="padding:20px;color:var(--text3)">No answers recorded.</p>'}
+        </div>
+    </div>
+
+    <!-- Congratulatory Footer -->
+    <div class="results-footer-msg">
+        <i class="fas fa-star"></i>
+        <p class="arabic-msg">تهانينا على إتمام الاختبار، نقدر جهودك، ونتمنى لك المزيد من النجاح والتميز 🌟</p>
+        <p class="english-msg">Congratulations on completing the exam. We value your dedication and wish you continued success and excellence.</p>
+    </div>
+    `;
+}
+
+function renderReviewItem(a, i) {
+    const statusClass = a.isCorrect ? 'correct-item-e' : (a.userAnswer === null ? 'skip-item-e' : 'wrong-item-e');
+    const numClass = a.isCorrect ? 'correct' : (a.userAnswer === null ? 'skip' : 'wrong');
+    const icon = a.isCorrect ? '✓' : (a.userAnswer === null ? '—' : '✗');
+    const userAnswerText = a.userAnswer !== null ? a.options[a.userAnswer] : 'No answer (Skipped/Timeout)';
+    const correctAnswerText = a.options[a.correctAnswer];
+    const userLetter = a.userAnswer !== null ? String.fromCharCode(65 + a.userAnswer) : '—';
+    const correctLetter = String.fromCharCode(65 + a.correctAnswer);
+
+    const aiMsg = a.isCorrect
+        ? `Well done! "${correctAnswerText}" is correct because it directly addresses the core concept of this topic.`
+        : `The correct answer is "${correctAnswerText}". Understanding why: this concept is fundamental to the topic. Review this area in your learning path for a full explanation.`;
+
+    return `
+    <div class="review-item-enhanced ${statusClass}" id="ri-${i}" onclick="toggleReviewItem(${i})">
+        <div class="ri-header">
+            <div class="ri-header-left">
+                <div class="ri-num ${numClass}">${icon}</div>
+                <span class="ri-question-text">${a.question.length > 90 ? a.question.substring(0,90) + '...' : a.question}</span>
+            </div>
+            <i class="fas fa-chevron-down ri-expand-icon"></i>
+        </div>
+        <div class="ri-details">
+            ${!a.isCorrect && a.userAnswer !== null ? `
+            <div class="ri-answer-row your-answer">
+                <div class="ri-answer-letter">${userLetter}</div>
+                <div class="ri-answer-text"><strong style="color:#ef4444">Your Answer:</strong> ${userAnswerText}</div>
+            </div>` : ''}
+            <div class="ri-answer-row ${a.isCorrect ? 'correct-own' : 'correct-answer'}">
+                <div class="ri-answer-letter">${correctLetter}</div>
+                <div class="ri-answer-text"><strong style="color:#22c55e">Correct Answer:</strong> ${correctAnswerText}</div>
+            </div>
+            <div class="ri-ai-explanation">
+                <i class="fas fa-robot"></i>
+                <p><strong>AI Explanation:</strong> ${aiMsg}</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+function toggleReviewItem(i) {
+    const el = document.getElementById('ri-' + i);
+    el.classList.toggle('ri-expanded');
+}
+
+function filterReview(type, btn) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.review-item-enhanced').forEach(item => {
+        if (type === 'all') { item.style.display = 'block'; return; }
+        if (type === 'wrong' && item.classList.contains('wrong-item-e')) { item.style.display = 'block'; return; }
+        if (type === 'correct' && item.classList.contains('correct-item-e')) { item.style.display = 'block'; return; }
+        item.style.display = 'none';
+    });
+}
+
+function retryQuiz() {
+    // Go back to where we came from
+    const fromAdaptive = sessionStorage.getItem('quizMode');
+    if (fromAdaptive) window.location.href = 'adaptive-quiz.html';
+    else window.location.href = 'questions.html';
+}
+
+// Load results on page load
+document.addEventListener('DOMContentLoaded', loadResults);
+</script>
+</body>
+</html>

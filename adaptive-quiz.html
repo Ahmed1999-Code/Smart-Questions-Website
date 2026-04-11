@@ -1,0 +1,690 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Quiz â€“ EduAI Pro</title>
+    <link rel="stylesheet" href="platform.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="quiz-body">
+
+    <!-- Quiz Header -->
+    <header class="quiz-header-bar">
+        <div class="qhb-left">
+            <button class="qhb-back-btn" onclick="confirmExit()"><i class="fas fa-times"></i></button>
+            <div class="qhb-brand"><i class="fas fa-brain"></i> EduAI Pro</div>
+        </div>
+        <div class="qhb-center">
+            <div class="qhb-progress">
+                <div class="qhb-progress-bar">
+                    <div class="qhb-progress-fill" id="qhb-progress-fill" style="width:0%"></div>
+                </div>
+                <span class="qhb-progress-label" id="qhb-progress-label">0 / 0</span>
+            </div>
+        </div>
+        <div class="qhb-right">
+            <div class="qhb-streak"><i class="fas fa-fire"></i> <span id="qhb-streak">0</span></div>
+            <div class="qhb-xp"><i class="fas fa-bolt"></i> <span id="qhb-xp">0</span> XP</div>
+            <div class="qhb-timer" id="qhb-timer">
+                <div class="qhb-timer-ring">
+                    <svg viewBox="0 0 36 36">
+                        <circle class="timer-track" cx="18" cy="18" r="15"/>
+                        <circle class="timer-fill" id="timer-ring-fill" cx="18" cy="18" r="15"
+                            stroke-dasharray="94" stroke-dashoffset="0"/>
+                    </svg>
+                    <span id="timer-seconds">30</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Difficulty Indicator -->
+    <div class="difficulty-bar" id="difficulty-bar">
+        <div class="diff-indicator">
+            <i class="fas fa-signal"></i>
+            <span id="diff-label">Adaptive</span>
+        </div>
+        <div class="diff-dots">
+            <span class="diff-dot active" id="dd-1" title="Beginner"></span>
+            <span class="diff-dot" id="dd-2" title="Intermediate"></span>
+            <span class="diff-dot" id="dd-3" title="Advanced"></span>
+            <span class="diff-dot" id="dd-4" title="Expert"></span>
+        </div>
+        <div class="topic-chip" id="topic-chip"><i class="fas fa-tag"></i> Virtual Environments</div>
+    </div>
+
+    <!-- Main Quiz Area -->
+    <main class="aq-main" id="aq-main">
+
+        <!-- Question Card -->
+        <div class="aq-question-card" id="aq-question-card">
+
+            <!-- Question Meta -->
+            <div class="aq-q-meta" id="aq-q-meta">
+                <span class="aq-q-number" id="aq-q-number">Question 1</span>
+                <span class="aq-q-type-badge" id="aq-q-type-badge"><i class="fas fa-list-ul"></i> MCQ</span>
+                <span class="aq-q-time-est" id="aq-q-time-est"><i class="fas fa-clock"></i> ~30s</span>
+            </div>
+
+            <!-- Question Text -->
+            <div class="aq-question-text" id="aq-question-text"></div>
+
+            <!-- Hint Button -->
+            <button class="aq-hint-btn" id="aq-hint-btn" onclick="showHint()">
+                <i class="fas fa-lightbulb"></i> Show Hint
+            </button>
+            <div class="aq-hint-box" id="aq-hint-box" style="display:none">
+                <i class="fas fa-lightbulb"></i>
+                <p id="aq-hint-text"></p>
+            </div>
+
+            <!-- Answer Area (changes by type) -->
+            <div class="aq-answer-area" id="aq-answer-area"></div>
+
+            <!-- Feedback Area -->
+            <div class="aq-feedback" id="aq-feedback" style="display:none">
+                <div class="aq-feedback-icon" id="aq-feedback-icon"></div>
+                <div class="aq-feedback-content">
+                    <h4 id="aq-feedback-title"></h4>
+                    <p id="aq-feedback-text"></p>
+                </div>
+            </div>
+
+            <!-- AI Tutor -->
+            <div class="aq-ai-tutor" id="aq-ai-tutor" style="display:none">
+                <div class="ai-tutor-header">
+                    <div class="ai-tutor-avatar"><i class="fas fa-robot"></i></div>
+                    <div>
+                        <h4>AI Tutor</h4>
+                        <span class="ai-typing-label" id="ai-typing-label">Thinking...</span>
+                    </div>
+                </div>
+                <div class="ai-tutor-message" id="ai-tutor-message"></div>
+                <div class="ai-step-by-step" id="ai-step-by-step" style="display:none">
+                    <h5><i class="fas fa-list-ol"></i> Step-by-Step Explanation</h5>
+                    <ol class="ai-steps-list" id="ai-steps-list"></ol>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="aq-actions" id="aq-actions">
+                <button class="aq-skip-btn" id="aq-skip-btn" onclick="skipQuestion()">
+                    <i class="fas fa-forward"></i> Skip
+                </button>
+                <button class="aq-next-btn" id="aq-next-btn" disabled onclick="nextQuestion()">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- XP Pop animation -->
+    <div class="xp-pop" id="xp-pop" style="display:none">+<span id="xp-pop-val">10</span> XP</div>
+
+    <!-- Exit Confirm Modal -->
+    <div class="modal-overlay" id="exit-modal" style="display:none">
+        <div class="modal-card">
+            <div class="modal-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3>Exit Quiz?</h3>
+            <p>Your progress in this session will be lost. Are you sure you want to exit?</p>
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" onclick="document.getElementById('exit-modal').style.display='none'">Continue Quiz</button>
+                <button class="modal-btn-confirm" onclick="exitToQuiz()">Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="questions.js"></script>
+    <script src="platform.js"></script>
+    <script>
+    // ==========================================
+    // ADAPTIVE QUIZ ENGINE â€” EduAI Pro
+    // ==========================================
+
+    const config = JSON.parse(sessionStorage.getItem('quizConfig') || '{"num":20,"timer":30,"diff":"adaptive"}');
+    const mode = sessionStorage.getItem('quizMode') || 'adaptive';
+
+    // Adaptive engine state
+    let state = {
+        questions: [],
+        currentIndex: 0,
+        score: 0,
+        xp: 0,
+        streak: 0,
+        maxStreak: 0,
+        difficultyLevel: 1,
+        correctStreak: 0,
+        wrongStreak: 0,
+        answered: false,
+        timerSeconds: config.timer || 30,
+        timerInterval: null,
+        userAnswers: [],
+        sessionStart: Date.now(),
+        hintsUsed: 0,
+        skipsUsed: 0,
+    };
+
+    const diffLabels = ['', 'مبتدئ | Beginner', 'متوسط | Intermediate', 'متقدم | Advanced', 'خبير | Expert'];
+    const diffColors = ['', '#27ae60', '#f7931e', '#e74c3c', '#9b59b6'];
+    const xpPerAnswer = { correct: 10, streak3: 5, streak5: 10 };
+
+    // ─────────────────────────────────────────────
+    // BILINGUAL HINTS: Arabic + English (Hybrid)
+    // ─────────────────────────────────────────────
+    const topicHints = {
+        'cybersecurity': [
+            "💡 فكر في المفهوم الأساسي للحماية الرقمية | Think about the core concept of digital protection.",
+            "💡 الاسم يصف نوع الهجوم مباشرة | The name directly describes the type of attack.",
+            "💡 هذا الاختصار يصف شبكة خاصة | This abbreviation describes a private network.",
+            "💡 الجدار يمنع الدخول غير المرغوب فيه | A wall prevents unwanted entry.",
+            "💡 'Mal' تعني 'سيئ' باللاتينية | 'Mal' means 'bad' in Latin.",
+            "💡 S في HTTPS تعني Secure | The S in HTTPS stands for Secure.",
+            "💡 الفدية = Ransom — البرنامج يحجز ملفاتك | Ransom = it holds your files hostage.",
+            "💡 عاملان أفضل من عامل واحد | Two factors are better than one.",
+            "💡 الحقن = إدخال كود غير مصرح به | Injection = inserting unauthorized code.",
+            "💡 الوسط = المهاجم يقف بينك وبين الخادم | Middle = attacker stands between you and server.",
+            "💡 DDoS = الإغراق بطلبات كثيرة | DDoS = flood with many requests.",
+            "💡 Brute = القوة — كل الاحتمالات | Brute = force — all possibilities.",
+            "💡 'Zero Day' = يوم اكتشاف الثغرة = لا وقت للتصحيح | Day zero = just discovered, no patch yet.",
+            "💡 'Least' = أقل = الصلاحيات الضرورية فقط | Least = minimum = only what's needed.",
+            "💡 التشفير يحوّل النص الواضح إلى نص مشفر | Encryption converts plaintext to ciphertext.",
+            "💡 الهندسة الاجتماعية تستهدف العقل لا الجهاز | Social engineering targets the mind, not the machine.",
+            "💡 اختبار الاختراق = هجوم مشروع | Pen test = authorized attack.",
+            "💡 حصان طروادة بدا هدية لكنه كان فخ | Trojan horse appeared as a gift but was a trap.",
+            "💡 التحديثات تسدّ الثقوب الأمنية | Updates plug security holes.",
+            "💡 Keylogger يسجّل ضغطات المفاتيح | Keylogger records key presses.",
+            "💡 CIA = السرية + النزاهة + التوافر | CIA = Confidentiality + Integrity + Availability.",
+            "💡 Botnet = شبكة الزومبي رقمي | Botnet = zombie device network.",
+        ],
+        'virtual-env': [
+            "💡 فكّر في المشكلة التي تحلها البيئات الافتراضية | Think about what problem virtual environments solve.",
+            "💡 أي أداة مدمجة في بايثون 3.3+ | Which tool is built-in to Python 3.3+?",
+            "💡 الأمر يستخدم العلامة -m لتشغيل وحدة | The command uses -m flag to run a module.",
+            "💡 مجلد Scripts في ويندوز، bin في Linux | Scripts folder on Windows, bin on Linux.",
+            "💡 عكس activate هو... | The opposite of activate is...",
+            "💡 الحزم داخل مجلد البيئة نفسها | Packages are stored inside the environment folder.",
+            "💡 فكّر في مشاركة البيئات وإعادة إنشائها | Think about sharing and reproducing environments.",
+            "💡 العلامة -r تعني 'requirements' | The -r flag means 'requirements'.",
+            "💡 الميزة الأساسية هي العزل بين المشاريع | The key benefit is isolation between projects.",
+            "💡 pip list هو أمر العرض | pip list is the display command.",
+            "💡 sudo ليست أداة إدارة بيئات | sudo is not an environment manager.",
+            "💡 الأداة تسمى virtualenv وليس venv | The tool is called virtualenv, not venv.",
+        ]
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // BILINGUAL AI TUTOR EXPLANATIONS: Arabic + English (Hybrid Style)
+    // ─────────────────────────────────────────────────────────────────
+    const aiExplanationsByTopic = {
+        'cybersecurity': [
+            {
+                message: "🔐 الأمن السيبراني | Cybersecurity هو مجال يهدف إلى حماية الأنظمة والشبكات والبيانات من الهجمات الرقمية. It's the practice of defending computers, servers, networks, and data from malicious attacks. كل يوم تزداد أهميته في عالمنا الرقمي! 🌐",
+                steps: ["الأمن السيبراني يشمل الحماية على مستوى الشبكة والجهاز والبيانات", "It covers Network Security, Device Security, and Data Security", "الهدف الأساسي: منع الوصول غير المصرح به | Goal: prevent unauthorized access"]
+            },
+            {
+                message: "🎣 Phishing (التصيّد الاحتيالي) هو هجوم يتظاهر فيه المهاجم بأنه جهة موثوقة عبر رسائل بريد إلكتروني أو مواقع مزيّفة. It tricks victims into revealing sensitive info like passwords or credit card numbers. احذر الروابط المشبوهة دائمًا! ⚠️",
+                steps: ["المهاجم يتظاهر بأنه بنك أو شركة موثوقة | Attacker impersonates trusted entity", "الضحية تُدخل بياناتها في موقع مزيّف | Victim enters info on a fake site", "الحل: تحقق دائمًا من عنوان URL | Solution: Always verify the URL"]
+            },
+            {
+                message: "🔒 VPN (Virtual Private Network — الشبكة الخاصة الافتراضية) تُنشئ نفقًا مشفرًا بين جهازك والإنترنت. It hides your IP address and encrypts your traffic, making it harder for attackers to intercept your data. استخدمها على شبكات Wi-Fi العامة دائمًا! 📡",
+                steps: ["VPN يُخفي عنوان IP الحقيقي | VPN hides your real IP address", "يُشفّر البيانات بين جهازك والخادم | Encrypts data between your device and server", "ضروري على شبكات Wi-Fi العامة | Essential on public Wi-Fi networks"]
+            },
+            {
+                message: "🧱 الـ Firewall (جدار الحماية) هو نظام يراقب ويُصفّي حركة البيانات الواردة والصادرة. It acts as a barrier between a trusted internal network and untrusted external networks. يمكن أن يكون برمجيًا أو جهازًا ماديًا! 🛡️",
+                steps: ["يحلل كل طلب بيانات يمر عبره | Analyzes every data request passing through", "يُطبّق قواعد محددة للسماح أو الحظر | Applies rules to allow or block traffic", "هو أول خط دفاع في شبكتك | It's the first line of defense in your network"]
+            },
+            {
+                message: "🦠 Malware (البرمجيات الخبيثة) هو مصطلح شامل لأي برنامج مصمم للإضرار. Malware includes viruses, worms, ransomware, spyware, trojans, and more. يصعب أحيانًا الكشف عنه — لذلك مضاد الفيروسات ضروري! 🔍",
+                steps: ["أنواعه: فيروسات، ديدان، برامج تجسس | Types: viruses, worms, spyware", "ينتشر عبر مرفقات البريد أو مواقع مخترقة | Spreads via email attachments or infected sites", "الحل: مضاد فيروسات + تحديثات منتظمة | Solution: Antivirus + regular updates"]
+            },
+            {
+                message: "🌐 HTTPS = HTTP + SSL/TLS التشفير. بينما HTTP يرسل البيانات كنص واضح يمكن اعتراضه، فإن HTTPS يُشفّر الاتصال بين متصفحك والخادم. Always look for the 🔒 padlock icon before entering sensitive info! تحقق من القفل دائمًا! 🔒",
+                steps: ["HTTP = نص واضح غير آمن | HTTP = plain text, not secure", "HTTPS = اتصال مشفر بـ TLS | HTTPS = connection encrypted with TLS", "ابحث دائمًا عن أيقونة القفل | Always look for the padlock icon"]
+            },
+            {
+                message: "💰 Ransomware (برامج الفدية) هو نوع خطير من Malware يُشفّر ملفاتك ثم يطلب فدية لاستعادتها. It has caused billions in damage globally. الحل الأفضل: نسخ احتياطية منتظمة! The best protection is regular backups! 💾",
+                steps: ["يُشفّر ملفاتك ويمنعك من الوصول إليها | Encrypts files and blocks your access", "يطلب دفع فدية (غالبًا بـ Bitcoin) | Demands ransom payment (usually Bitcoin)", "الحماية: Backup منتظم + لا تفتح مرفقات مجهولة | Protection: Regular backups + don't open unknown attachments"]
+            },
+            {
+                message: "🔑 المصادقة الثنائية (2FA) تُضيف طبقة أمان إضافية. Even if someone steals your password, they can't log in without the second factor (like an SMS code or authentication app). فعّلها على كل حساباتك الآن! Enable it everywhere! 📱",
+                steps: ["العامل الأول: كلمة المرور | First factor: Password", "العامل الثاني: OTP أو بصمة أو جهاز موثوق | Second factor: OTP, biometric, or trusted device", "2FA تقلل خطر الاختراق بنسبة 99%! | 2FA reduces breach risk by 99%!"]
+            },
+            {
+                message: "💉 SQL Injection هو هجوم يحدث عندما يُدرج المهاجم كود SQL خبيث في حقول الإدخال. It can expose, modify, or delete your entire database! الحل: استخدام Prepared Statements دائمًا. Never trust user input! لا تثق بمدخلات المستخدم أبدًا! 🛡️",
+                steps: ["المهاجم يُدخل كود SQL في نموذج تسجيل دخول | Attacker injects SQL code in login forms", "قد يكشف جميع بيانات قاعدة البيانات | Can expose the entire database content", "الحل: Prepared Statements + Input Validation | Solution: Prepared Statements + Input Validation"]
+            },
+            {
+                message: "🕵️ Man-in-the-Middle (MITM) — المهاجم يضع نفسه بين طرفي الاتصال دون علمهم. He can read, modify, or inject data into the conversation. يحدث كثيرًا على Wi-Fi العام! Use HTTPS and VPN to protect yourself. 🔐",
+                steps: ["المهاجم يعترض الاتصال بين الطرفين | Attacker intercepts communication between parties", "يمكنه قراءة أو تعديل البيانات | Can read or modify the data", "الحماية: HTTPS + VPN + تجنب Wi-Fi العام | Protection: HTTPS + VPN + avoid public Wi-Fi"]
+            },
+            {
+                message: "💥 DDoS (Distributed Denial of Service) — هجوم يُغرق خادمًا بملايين الطلبات من آلاف الأجهزة المخترقة حتى يتعطل. It's like thousands of people blocking the entrance of a shop so real customers can't enter! الحل: CDN + Rate Limiting. 🌊",
+                steps: ["آلاف الأجهزة المخترقة (Botnet) ترسل طلبات معًا | Thousands of hijacked devices send requests simultaneously", "الخادم ينهار تحت الضغط | Server crashes under the load", "الحماية: CDN + Firewall + Rate Limiting | Protection: CDN + Firewall + Rate Limiting"]
+            },
+            {
+                message: "🔨 Brute Force — المهاجم يجرب كل كلمات المرور الممكنة حتى يجد الصحيحة. Modern computers can try billions of combinations per second! الحل: كلمات مرور طويلة + 2FA + Account Lockout. A 12-character password takes centuries to crack! 🔐",
+                steps: ["يُجرّب ملايين الاحتمالات تلقائيًا | Tries millions of combinations automatically", "كلمات المرور القصيرة تُكسر في ثوانٍ | Short passwords crack in seconds", "الحل: كلمة مرور طويلة ومعقدة + 2FA | Solution: Long complex password + 2FA"]
+            },
+            {
+                message: "🕳️ Zero-Day Vulnerability — ثغرة أمنية لم يكتشفها المطوّرون بعد، لذا لا يوجد تصحيح (Patch) لها. المهاجمون يستغلونها قبل أن يعرف به أحد. It's literally 'zero days' of protection! التحديثات الفورية أهم وسيلة حماية. ⚡",
+                steps: ["الثغرة غير معروفة للمطوّر عند اكتشافها | Vulnerability is unknown to the developer at discovery", "المهاجمون يستغلونها فور اكتشافها | Attackers exploit it as soon as they find it", "الحماية: تحديثات أمان فورية + برامج مراقبة | Protection: Immediate patches + monitoring software"]
+            },
+            {
+                message: "🎯 مبدأ Least Privilege (أقل الامتيازات) — كل مستخدم يحصل على الصلاحيات الضرورية فقط لعمله. If an account is compromised, the damage is limited. هذا المبدأ يقلل نطاق الضرر عند أي اختراق. Give access only when needed, revoke when done! 🔒",
+                steps: ["كل مستخدم يحصل على أدنى الصلاحيات الضرورية | Each user gets minimum necessary permissions", "يحد من الضرر عند اختراق أي حساب | Limits damage when any account is compromised", "راجع الصلاحيات دوريًا واحذف غير الضرورية | Regularly review and remove unnecessary permissions"]
+            },
+            {
+                message: "🔐 التشفير | Encryption — تحويل البيانات إلى شكل غير مقروء باستخدام خوارزمية ومفتاح. Only someone with the correct key can decrypt it. هناك تشفير متماثل (Symmetric) وغير متماثل (Asymmetric). HTTPS يستخدم TLS وهو نوع من التشفير! 🗝️",
+                steps: ["Plaintext → (Algorithm + Key) → Ciphertext", "التشفير المتماثل: نفس المفتاح للتشفير والفك | Symmetric: same key for both", "التشفير غير المتماثل: مفتاح عام وخاص | Asymmetric: public & private key pair"]
+            },
+            {
+                message: "🧠 الهندسة الاجتماعية | Social Engineering — استغلال الطبيعة البشرية بدلًا من الثغرات التقنية. Attackers manipulate people into giving up confidential info. إنه أخطر هجوم لأنه يستهدف نقطة ضعف لا يمكن تصحيحها ببرنامج! 'الإنسان = أضعف حلقة' | 'The human is the weakest link'. 🎭",
+                steps: ["يستغل الثقة والسلطة والخوف لإخراج معلومات | Exploits trust, authority, and fear", "أمثلة: Phishing, Vishing, Pretexting | Examples: Phishing, Vishing, Pretexting", "الحل: التوعية والتدريب المستمر | Solution: Ongoing awareness and training"]
+            },
+            {
+                message: "🕵️‍♂️ اختبار الاختراق | Penetration Testing (Pen Test) — محاكاة هجوم حقيقي بإذن رسمي لاكتشاف الثغرات. 'Think like an attacker to defend like a pro!' يوجد White Hat Hackers (أخلاقيون) يفعلون هذا مهنيًا. نتيجته: تقرير شامل بالثغرات وطرق معالجتها. 🧪",
+                steps: ["مرحلة الاستطلاع | Phase 1: Reconnaissance — جمع المعلومات", "مرحلة الاستغلال | Phase 2: Exploitation — اختبار الثغرات", "مرحلة التقرير | Phase 3: Reporting — توثيق النتائج والتوصيات"]
+            },
+            {
+                message: "🐴 حصان طروادة | Trojan Horse — برنامج يبدو شرعيًا أو مفيدًا لكنه يُخفي داخله كودًا خبيثًا. Unlike viruses, it doesn't self-replicate — you install it yourself unknowingly! تنزيل البرامج من مصادر غير موثوقة أكبر سبب. Always verify the source! 🔍",
+                steps: ["يبدو كتطبيق عادي أو لعبة أو أداة مجانية | Appears as normal app, game, or free tool", "بمجرد التثبيت، يفتح بابًا خلفيًا للمهاجم | Once installed, opens a backdoor for attacker", "الحل: تنزيل من مصادر رسمية موثوقة فقط | Solution: Only download from official trusted sources"]
+            },
+            {
+                message: "🔄 تحديثات البرامج | Software Updates — كل تحديث يحمل إصلاحات أمنية لثغرات مكتشفة. Attackers specifically target outdated software because vulnerabilities are publicly known! تقريبًا 60% من الاختراقات بسبب برامج غير محدّثة. Enable auto-updates! ⚡",
+                steps: ["المطوّرون يكتشفون ثغرات ويُصلحونها في التحديثات | Developers discover and fix vulnerabilities in updates", "المهاجمون يستهدفون النسخ القديمة بشكل مباشر | Attackers specifically target old versions", "فعّل التحديث التلقائي دائمًا | Always enable automatic updates"]
+            },
+            {
+                message: "⌨️ Keylogger — برنامج خبيث يسجل كل ضغطة مفتاح تضغطها سرًا. It captures passwords, credit card numbers, messages, and more. يُنصب عادةً عبر Malware أو أجهزة مادية على لوحة المفاتيح. Use 2FA — even if your password is captured, you're still protected! 🔐",
+                steps: ["يسجل كل ما تكتبه بما في ذلك كلمات المرور | Records everything you type including passwords", "يرسل البيانات للمهاجم عن بُعد | Sends data to attacker remotely", "الحماية: مضاد فيروسات + 2FA + لوحات مفاتيح افتراضية | Protection: Antivirus + 2FA + virtual keyboards"]
+            },
+            {
+                message: "🏛️ CIA Triad — الأعمدة الثلاثة للأمن السيبراني:\n🔵 Confidentiality (السرية): البيانات للمصرّح لهم فقط\n🟢 Integrity (النزاهة): البيانات دقيقة وغير مُعدّلة\n🔴 Availability (التوافر): الأنظمة متاحة عند الحاجة\nEvery cybersecurity decision maps to one or more of these pillars! 🎯",
+                steps: ["السرية | Confidentiality: تشفير + ضوابط وصول | Encryption + Access controls", "النزاهة | Integrity: تجزئة + التوقيعات الرقمية | Hashing + Digital signatures", "التوافر | Availability: نسخ احتياطية + مرونة النظام | Backups + System redundancy"]
+            },
+            {
+                message: "🤖 Botnet — شبكة ضخمة من الأجهزة المخترقة (تُسمى Zombies) يتحكم بها المهاجم عن بُعد. Used for DDoS attacks, spam campaigns, and cryptocurrency mining. جهازك قد يكون جزءًا من Botnet دون أن تعرف! Your device could be a zombie right now! 🧟",
+                steps: ["المهاجم يُصيب آلاف الأجهزة ببرامج خبيثة | Attacker infects thousands of devices with malware", "يتحكم بها عن بُعد عبر C&C Server | Controls them remotely via Command & Control server", "الحماية: مضاد فيروسات + تحديثات + Firewall | Protection: Antivirus + Updates + Firewall"]
+            }
+        ],
+        'virtual-env': [
+            { message: "🐍 البيئات الافتراضية | Virtual Environments تُنشئ فضاءات معزولة لمشاريع بايثون. بدونها، جميع المشاريع تشارك نفس الحزم العالمية مما يسبب تعارضات في الإصدارات. Without them, project A needing requests==2.0 would conflict with project B needing requests==3.0! 🔧", steps: ["فهم المشكلة: تعارض الحزم العالمية | Global package conflicts", "البيئة الافتراضية تُنشئ مجلدًا معزولًا مستقلًا | Creates a dedicated isolated directory", "كل مشروع له مُفسّر بايثون وحزم خاصة به | Each project gets its own interpreter and packages"] },
+            { message: "📦 بايثون 3.3+ يأتي مع وحدة venv مدمجة. It's the standard built-in solution — no extra installation needed! Conda وPipenv أدوات خارجية بمزايا إضافية. ابدأ دائمًا بـ venv للمشاريع البسيطة! 🛠️", steps: ["مدمج في بايثون 3.3+ | Built into Python 3.3+", "`python -m venv env_name` ينشئ البيئة | Creates the environment", "فعّلها بسكريبت activate في Scripts/bin"] },
+            { message: "⚙️ الأمر `python -m venv env` ينشئ مجلد env يحتوي على بايثون ومجلد الحزم والسكريبتات. `-m` تعني 'شغّل وحدة'. This is the recommended way to create isolated Python environments! 🐍", steps: ["python -m → تشغيل وحدة | Run a module", "venv → الوحدة المدمجة للبيئات | Built-in environment module", "env → اسم مجلد البيئة | Directory name for the environment"] },
+        ]
+    };
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Get explanation for a question
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function getExplanation(q, qIndex) {
+        const topic = q.topic || 'virtual-env';
+        const explanations = aiExplanationsByTopic[topic] || aiExplanationsByTopic['virtual-env'];
+
+        // If cybersecurity, match by topic-specific index based on the question's position among cyber questions
+        if (topic === 'cybersecurity') {
+            const cyberQs = state.questions.filter(x => x.topic === 'cybersecurity');
+            const localIndex = cyberQs.indexOf(q);
+            return explanations[((localIndex >= 0 ? localIndex : qIndex)) % explanations.length];
+        }
+        return explanations[qIndex % explanations.length];
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Get hint for a question
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function getHint(q, qIndex) {
+        const topic = q.topic || 'virtual-env';
+        const hintList = topicHints[topic] || topicHints['virtual-env'];
+        return hintList[qIndex % hintList.length];
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Detect topic chip label
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function getTopicLabel(q) {
+        if (!q.topic || q.topic === 'virtual-env') {
+            const envTopics = ['البيئات الافتراضية', 'إدارة الحزم', 'أوامر pip', 'Conda & Pipenv', 'إعدادات متقدمة'];
+            return `<i class="fas fa-snake" style="color:#f7931e"></i> ${envTopics[state.currentIndex % envTopics.length]}`;
+        }
+        if (q.topic === 'cybersecurity') {
+            return `<i class="fas fa-shield-alt" style="color:#ef4444"></i> 🔐 الأمن السيبراني | Cybersecurity`;
+        }
+        return `<i class="fas fa-tag"></i> ${q.topic}`;
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Prepare questions (with optional topic filter)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function prepareQuestions() {
+        let all = [...quizQuestions];
+        // Shuffle
+        all = all.sort(() => Math.random() - 0.5);
+        const numQ = config.num === 'all' ? all.length : Math.min(parseInt(config.num) || 20, all.length);
+        state.questions = all.slice(0, numQ);
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Load question
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function loadQuestion() {
+        if (state.currentIndex >= state.questions.length) { endQuiz(); return; }
+        const q = state.questions[state.currentIndex];
+        state.answered = false;
+
+        // Reset UI
+        document.getElementById('aq-feedback').style.display = 'none';
+        document.getElementById('aq-ai-tutor').style.display = 'none';
+        document.getElementById('aq-hint-box').style.display = 'none';
+        document.getElementById('aq-hint-btn').style.display = 'flex';
+        document.getElementById('aq-next-btn').disabled = true;
+        document.getElementById('aq-skip-btn').disabled = false;
+
+        // Progress
+        const pct = (state.currentIndex / state.questions.length) * 100;
+        document.getElementById('qhb-progress-fill').style.width = pct + '%';
+        document.getElementById('qhb-progress-label').textContent = `${state.currentIndex + 1} / ${state.questions.length}`;
+        document.getElementById('aq-q-number').textContent = `سؤال | Question ${state.currentIndex + 1}`;
+        document.getElementById('qhb-streak').textContent = state.streak;
+        document.getElementById('qhb-xp').textContent = state.xp;
+
+        // Difficulty
+        const dl = Math.max(1, Math.min(4, state.difficultyLevel));
+        document.getElementById('diff-label').textContent = diffLabels[dl];
+        document.getElementById('diff-label').style.color = diffColors[dl];
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById('dd-' + i).className = 'diff-dot' + (i <= dl ? ' active' : '');
+        }
+
+        // Topic chip
+        document.getElementById('topic-chip').innerHTML = getTopicLabel(q);
+
+        // Question text
+        document.getElementById('aq-question-text').textContent = q.question;
+
+        // Hint
+        document.getElementById('aq-hint-text').textContent = getHint(q, state.currentIndex);
+
+        // Render options
+        const area = document.getElementById('aq-answer-area');
+        area.innerHTML = '';
+        const optContainer = document.createElement('div');
+        optContainer.className = 'aq-options';
+
+        q.options.forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'aq-option-btn';
+            btn.setAttribute('data-index', i);
+            btn.innerHTML = `
+                <span class="aq-opt-letter">${String.fromCharCode(65 + i)}</span>
+                <span class="aq-opt-text">${opt}</span>
+                <span class="aq-opt-indicator"></span>
+            `;
+            btn.addEventListener('click', () => selectAnswer(i, btn, optContainer, q));
+            optContainer.appendChild(btn);
+        });
+        area.appendChild(optContainer);
+
+        startTimer();
+
+        const card = document.getElementById('aq-question-card');
+        card.classList.remove('slide-in');
+        void card.offsetWidth;
+        card.classList.add('slide-in');
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Select answer
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function selectAnswer(index, btn, container, q) {
+        if (state.answered) return;
+        state.answered = true;
+        clearInterval(state.timerInterval);
+        document.getElementById('aq-skip-btn').disabled = true;
+
+        const isCorrect = index === q.correctAnswer;
+
+        container.querySelectorAll('.aq-option-btn').forEach((b, i) => {
+            b.classList.add('disabled');
+            if (i === q.correctAnswer) b.classList.add('correct-opt');
+            if (i === index && !isCorrect) b.classList.add('wrong-opt');
+        });
+
+        if (isCorrect) {
+            state.score++;
+            state.streak++;
+            state.maxStreak = Math.max(state.maxStreak, state.streak);
+            state.correctStreak++;
+            state.wrongStreak = 0;
+            let earned = xpPerAnswer.correct;
+            if (state.streak >= 3) earned += xpPerAnswer.streak3;
+            if (state.streak >= 5) earned += xpPerAnswer.streak5;
+            state.xp += earned;
+            showXPPop(earned);
+            if (state.correctStreak >= 3) { state.difficultyLevel = Math.min(4, state.difficultyLevel + 1); state.correctStreak = 0; }
+        } else {
+            state.streak = 0;
+            state.wrongStreak++;
+            state.correctStreak = 0;
+            if (state.wrongStreak >= 2) { state.difficultyLevel = Math.max(1, state.difficultyLevel - 1); state.wrongStreak = 0; }
+        }
+
+        state.userAnswers.push({
+            questionIndex: state.currentIndex,
+            question: q.question,
+            options: q.options,
+            userAnswer: index,
+            correctAnswer: q.correctAnswer,
+            isCorrect,
+            topic: q.topic || 'virtual-env'
+        });
+
+        showFeedback(isCorrect, q);
+        setTimeout(() => showAITutor(state.currentIndex, isCorrect, q), 600);
+        document.getElementById('aq-next-btn').disabled = false;
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Feedback (bilingual)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function showFeedback(isCorrect, q) {
+        const fb = document.getElementById('aq-feedback');
+        const icon = document.getElementById('aq-feedback-icon');
+        const title = document.getElementById('aq-feedback-title');
+        const text = document.getElementById('aq-feedback-text');
+
+        fb.className = 'aq-feedback ' + (isCorrect ? 'fb-correct' : 'fb-wrong');
+        icon.innerHTML = isCorrect ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
+
+        if (isCorrect) {
+            title.textContent = '✅ ممتاز! Correct! Well done!';
+            text.textContent = `أحسنت! 🔥 سلسلة ${state.streak} إجابات صحيحة! | Great! You're on a ${state.streak} question streak!`;
+        } else {
+            title.textContent = '❌ إجابة خاطئة | Incorrect — لنتعلم من هذا!';
+            text.textContent = `الإجابة الصحيحة هي | Correct answer: "${q.options[q.correctAnswer]}"`;
+        }
+
+        fb.style.display = 'flex';
+        fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // AI Tutor (bilingual typing effect)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function showAITutor(qIndex, isCorrect, q) {
+        const tutor = document.getElementById('aq-ai-tutor');
+        const msg = document.getElementById('ai-tutor-message');
+        const typingLabel = document.getElementById('ai-typing-label');
+        const stepsContainer = document.getElementById('ai-step-by-step');
+        const stepsList = document.getElementById('ai-steps-list');
+        const stepTitle = stepsContainer.querySelector('h5');
+
+        tutor.style.display = 'block';
+        typingLabel.textContent = '🤖 المعلم الذكي يفكر... | AI Tutor is thinking...';
+        msg.textContent = '';
+        stepsContainer.style.display = 'none';
+        if (stepTitle) stepTitle.innerHTML = '<i class="fas fa-list-ol"></i> خطوات التفسير | Step-by-Step Explanation';
+
+        const explanation = getExplanation(q, qIndex);
+
+        const prefix = isCorrect
+            ? '✅ إجابة صحيحة! | Correct! '
+            : '📌 تفسير الإجابة الصحيحة | Explanation: ';
+
+        const fullMsg = prefix + explanation.message;
+
+        let i = 0;
+        typingLabel.textContent = '⌨️ يكتب... | Typing...';
+
+        const typeInterval = setInterval(() => {
+            msg.textContent += fullMsg[i];
+            i++;
+            if (i >= fullMsg.length) {
+                clearInterval(typeInterval);
+                typingLabel.textContent = '🤖 المعلم الذكي | AI Tutor';
+
+                if (explanation.steps) {
+                    stepsContainer.style.display = 'block';
+                    stepsList.innerHTML = explanation.steps.map(s =>
+                        `<li style="margin-bottom:6px;line-height:1.7">${s}</li>`
+                    ).join('');
+                }
+            }
+        }, 14);
+
+        tutor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Hint (bilingual)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function showHint() {
+        const hintBox = document.getElementById('aq-hint-box');
+        hintBox.style.display = 'flex';
+        document.getElementById('aq-hint-btn').style.display = 'none';
+        state.hintsUsed++;
+    }
+
+    function skipQuestion() {
+        if (state.answered) return;
+        clearInterval(state.timerInterval);
+        state.streak = 0;
+        state.skipsUsed++;
+        const q = state.questions[state.currentIndex];
+        state.userAnswers.push({
+            questionIndex: state.currentIndex,
+            question: q.question,
+            options: q.options,
+            userAnswer: null,
+            correctAnswer: q.correctAnswer,
+            isCorrect: false,
+            topic: q.topic || 'virtual-env'
+        });
+        state.currentIndex++;
+        loadQuestion();
+    }
+
+    function nextQuestion() {
+        state.currentIndex++;
+        loadQuestion();
+    }
+
+    function startTimer() {
+        const totalTime = config.timer === 0 ? 999 : (config.timer || 30);
+        let timeLeft = totalTime;
+        document.getElementById('timer-seconds').textContent = totalTime === 999 ? 'âˆž' : totalTime;
+        const ring = document.getElementById('timer-ring-fill');
+        const circumference = 94;
+        ring.style.strokeDashoffset = '0';
+        ring.style.stroke = '#6c63ff';
+        if (totalTime === 999) return;
+
+        clearInterval(state.timerInterval);
+        state.timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-seconds').textContent = timeLeft;
+            const offset = circumference - (timeLeft / totalTime) * circumference;
+            ring.style.strokeDashoffset = offset;
+            if (timeLeft <= 10) ring.style.stroke = '#ef4444';
+            else if (timeLeft <= 20) ring.style.stroke = '#f7931e';
+
+            if (timeLeft <= 0) {
+                clearInterval(state.timerInterval);
+                if (!state.answered) {
+                    const q = state.questions[state.currentIndex];
+                    state.streak = 0;
+                    state.userAnswers.push({ questionIndex: state.currentIndex, question: q.question, options: q.options, userAnswer: null, correctAnswer: q.correctAnswer, isCorrect: false, topic: q.topic || 'virtual-env' });
+                    document.getElementById('aq-question-card').querySelectorAll('.aq-option-btn').forEach(b => b.classList.add('disabled'));
+                    const fb = document.getElementById('aq-feedback');
+                    fb.className = 'aq-feedback fb-timeout';
+                    document.getElementById('aq-feedback-icon').innerHTML = '<i class="fas fa-hourglass-end"></i>';
+                    document.getElementById('aq-feedback-title').textContent = '⏱️ انتهى الوقت! | Time\'s Up!';
+                    document.getElementById('aq-feedback-text').textContent = 'الإجابة الصحيحة | Correct answer: "' + q.options[q.correctAnswer] + '"';
+                    fb.style.display = 'flex';
+                    state.answered = true;
+                    document.getElementById('aq-next-btn').disabled = false;
+                    setTimeout(() => showAITutor(state.currentIndex, false, q), 600);
+                }
+            }
+        }, 1000);
+    }
+
+    function showXPPop(amount) {
+        const pop = document.getElementById('xp-pop');
+        document.getElementById('xp-pop-val').textContent = amount;
+        pop.style.display = 'block';
+        pop.style.opacity = '1';
+        pop.style.transform = 'translateX(-50%) translateY(0)';
+        setTimeout(() => {
+            pop.style.opacity = '0';
+            pop.style.transform = 'translateX(-50%) translateY(-40px)';
+            setTimeout(() => pop.style.display = 'none', 400);
+        }, 800);
+    }
+
+    function endQuiz() {
+        clearInterval(state.timerInterval);
+        const timeTaken = Math.round((Date.now() - state.sessionStart) / 1000);
+        const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
+        user.xp = (user.xp || 0) + state.xp;
+        user.streak = Math.max(user.streak || 0, state.streak);
+        if (!user.badges) user.badges = [];
+        if (state.score === state.questions.length && !user.badges.includes('perfect')) user.badges.push('perfect');
+        if (state.maxStreak >= 5 && !user.badges.includes('streak_5')) user.badges.push('streak_5');
+        localStorage.setItem('eduai_current_user', JSON.stringify(user));
+
+        const results = {
+            studentName: user.name || 'Student',
+            studentCode: user.email || 'â€”',
+            score: state.score,
+            totalQuestions: state.questions.length,
+            userAnswers: state.userAnswers,
+            xpEarned: state.xp,
+            maxStreak: state.maxStreak,
+            timeTaken,
+            hintsUsed: state.hintsUsed,
+            skipsUsed: state.skipsUsed,
+            adaptiveMode: true
+        };
+        sessionStorage.setItem('quizResults', JSON.stringify(results));
+        localStorage.setItem('latestQuizResults', JSON.stringify(results));
+        setTimeout(() => { window.location.href = 'results.html'; }, 300);
+    }
+
+    function confirmExit() { document.getElementById('exit-modal').style.display = 'flex'; }
+    function exitToQuiz() { clearInterval(state.timerInterval); window.location.href = 'dashboard.html'; }
+
+    // Boot
+    prepareQuestions();
+    loadQuestion();
+
+    window.addEventListener('beforeunload', (e) => {
+        if (state.currentIndex > 0 && state.currentIndex < state.questions.length) {
+            e.preventDefault(); e.returnValue = '';
+        }
+    });
+    </script>
+</body>
+</html>
