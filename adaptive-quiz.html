@@ -384,8 +384,22 @@
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function prepareQuestions() {
         let all = [...quizQuestions];
-        // Shuffle
-        all = all.sort(() => Math.random() - 0.5);
+        
+        // Filter by user selected question type from dashboard settings
+        if (config.type && config.type !== 'all') {
+            if (config.type === 'mcq') {
+                all = all.filter(q => !q.type || q.type === 'mcq');
+            } else {
+                all = all.filter(q => q.type === config.type);
+            }
+        }
+        
+        let complexQs = all.filter(q => q.type && q.type !== 'mcq');
+        let mcqQs = all.filter(q => !q.type || q.type === 'mcq').sort(() => Math.random() - 0.5);
+        
+        // Put complex questions first so they are immediately visible
+        all = [...complexQs, ...mcqQs];
+
         const numQ = config.num === 'all' ? all.length : Math.min(parseInt(config.num) || 20, all.length);
         state.questions = all.slice(0, numQ);
     }
