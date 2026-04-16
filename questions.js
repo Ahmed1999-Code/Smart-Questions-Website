@@ -584,6 +584,75 @@ const quizQuestions = [
         correctAnswer: 1,
         topic: "cybersecurity",
         difficulty: 3
+    },
+
+    // ============================================================
+    // 💡 NEW QUESTION TYPES DEMO (Fill in the Blank, Coding, Essay, etc.)
+    // ============================================================
+
+    {
+        type: "fill-blank",
+        question: "💡 [Fill Blank] اكتب الأمر المناسب لتفعيل البيئة الافتراضية في ويندوز؟ | Type the command to activate virtual environment in Windows:",
+        correctAnswer: "Scripts\\\\activate",
+        topic: "virtual-env",
+        difficulty: 2
+    },
+    {
+        type: "coding",
+        question: "🖥️ [Coding] اكتب كود بايثون بسيط لإنشاء قائمة وطباعة العنصر الأول. | Write a simple Python code to create a list and print the first element.",
+        correctAnswer: "list = [1, 2, 3]\\nprint(list[0])",
+        topic: "virtual-env",
+        difficulty: 3
+    },
+    {
+        type: "essay",
+        question: "📝 [Essay] اشرح بالتفصيل أهمية استخدام البيئات الافتراضية في تطوير بايثون؟ | Explain in detail the importance of using virtual environments in Python development.",
+        correctAnswer: "تساعد البيئات الافتراضية على عزل حزم ومكاتب كل مشروع، مما يمنع تعارض الإصدارات بين المشاريع المختلفة. | Virtual environments isolate project dependencies, preventing version conflicts.",
+        topic: "virtual-env",
+        difficulty: 3
+    },
+    {
+        type: "drag-drop",
+        question: "🖱️ [Drag & Drop] رتب خطوات استجابة الحوادث الأمنية بالترتيب الصحيح. | Drag and drop the incident response steps in the correct order.",
+        options: ["التحضير (Preparation)", "التعرف (Identification)", "الاحتواء (Containment)", "الاستئصال (Eradication)", "الاسترداد (Recovery)", "الدروس المستفادة (Lessons Learned)"],
+        correctAnswer: [0, 1, 2, 3, 4, 5],
+        topic: "cybersecurity",
+        difficulty: 2
+    },
+    {
+        type: "matching",
+        question: "🔗 [Matching] طابق كل مصطلح بمعناه الصحيح. | Match each term with its correct definition.",
+        pairs: [
+            { left: "Phishing", right: "التصيد الاحتيالي لسرقة البيانات" },
+            { left: "Ransomware", right: "برمجيات الفدية الخبيثة" },
+            { left: "Firewall", right: "جدار حماية الشبكة" },
+            { left: "VPN", right: "شبكة خاصة افتراضية" }
+        ],
+        // The correct Answers mapping
+        correctAnswer: ["التصيد الاحتيالي لسرقة البيانات", "برمجيات الفدية الخبيثة", "جدار حماية الشبكة", "شبكة خاصة افتراضية"],
+        topic: "cybersecurity",
+        difficulty: 2
+    },
+    {
+        type: "case-study",
+        question: "🕵️‍♂️ [Case Study] حالة دراسية: اختراق شبكة الشركة.",
+        context: "لاحظت شركة 'ألفا' بطئاً غير عادي في الخوادم وتوقف بعض الخدمات. بعد الفحص تبين أن هناك طلبات بمئات الآلاف تأتي من أجهزة مختلفة حول العالم إلى خادم الويب الأساسي في نفس الوقت.",
+        subQuestions: [
+            "ما نوع هذا الهجوم؟ | What type of attack is this?",
+            "كيف يمكن التخفيف منه؟ | How can it be mitigated?"
+        ],
+        correctAnswer: "هذا هجوم DDoS. يمكن التخفيف منه باستخدام جدار حماية قوي، وخدمات مثل Cloudflare لفلترة الزيارات الزائفة. | This is a DDoS attack. Mitigate using Firewalls and services like Cloudflare.",
+        topic: "cybersecurity",
+        difficulty: 4
+    },
+    {
+        type: "simulation",
+        question: "🎮 [Simulation] محاكاة: اكتشاف البريد الإلكتروني الاحتيالي.",
+        context: "لديك رسالة بريد إلكتروني من 'دعم البنك' تطلب منك الضغط على رابط لتحديث بياناتك بشكل عاجل. الرابط هو: http://bank-update-security.com.",
+        actionBtnText: "تشغيل أداة تحليل الروابط | Run Link Analysis Tool",
+        correctAnswer: "الرابط مزيف ولا يعود للنطاق الرسمي للبنك. عدم وجود HTTPS يثير الشك. يجب حذف الرسالة. | The link is fake and lacks HTTPS. Delete the email.",
+        topic: "cybersecurity",
+        difficulty: 3
     }
 
 ];

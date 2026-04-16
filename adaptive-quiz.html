@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +7,30 @@
     <link rel="stylesheet" href="platform.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+    /* Custom Interactive Question Types CSS */
+    .aq-input-text { width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-family: var(--font-main); font-size: 1rem; outline: none; margin-bottom: 20px; transition: border 0.3s; }
+    .aq-input-text:focus { border-color: var(--primary); }
+    .aq-textarea { width: 100%; min-height: 120px; padding: 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-family: var(--font-main); font-size: 1rem; outline: none; resize: vertical; margin-bottom: 20px; transition: border 0.3s; }
+    .aq-textarea:focus { border-color: var(--primary); }
+    .aq-code-editor { font-family: var(--font-code); background: #0d0f1a; color: #a855f7; border-left: 3px solid var(--primary); padding: 16px; min-height: 150px; direction: ltr; }
+    .aq-submit-btn { width: 100%; padding: 12px 24px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--primary), var(--primary2)); color: white; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(108,99,255, 0.4); transition: transform 0.2s; margin-top: 10px; }
+    .aq-submit-btn:hover { transform: translateY(-3px); }
+    .aq-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    /* Drag & Drop */
+    .aq-drag-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .aq-drag-item { background: var(--card2); border: 1px solid var(--border); padding: 12px; border-radius: 8px; cursor: grab; display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 500; }
+    .aq-drag-item:active { cursor: grabbing; }
+    /* Matching */
+    .aq-match-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; background: var(--bg3); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
+    .aq-match-left { flex: 1; font-weight: 600; color: var(--text); min-width: 200px; }
+    .aq-match-right { flex: 1; min-width: 200px; display: flex; }
+    .aq-match-select { width: 100%; padding: 10px; border-radius: 8px; background: var(--card); color: var(--text); border: 1px solid var(--border); outline: none; cursor: pointer; }
+    /* Context Box */
+    .aq-context-box { background: rgba(108, 99, 255, 0.08); border-right: 4px solid var(--primary); padding: 16px; margin-bottom: 20px; border-radius: 10px 0 0 10px; color: var(--text2); font-size: 0.95rem; line-height: 1.6; text-align: right; }
+    .aq-context-box h4 { color: var(--text); margin-bottom: 8px; }
+    .aq-sub-qs { margin-bottom: 15px; font-weight: bold; color: var(--text); text-align: right; }
+    </style>
 </head>
 <body class="quiz-body">
 
@@ -407,25 +431,133 @@
         // Hint
         document.getElementById('aq-hint-text').textContent = getHint(q, state.currentIndex);
 
-        // Render options
+        // Render options based on type
         const area = document.getElementById('aq-answer-area');
         area.innerHTML = '';
-        const optContainer = document.createElement('div');
-        optContainer.className = 'aq-options';
 
-        q.options.forEach((opt, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'aq-option-btn';
-            btn.setAttribute('data-index', i);
-            btn.innerHTML = `
-                <span class="aq-opt-letter">${String.fromCharCode(65 + i)}</span>
-                <span class="aq-opt-text">${opt}</span>
-                <span class="aq-opt-indicator"></span>
-            `;
-            btn.addEventListener('click', () => selectAnswer(i, btn, optContainer, q));
-            optContainer.appendChild(btn);
-        });
-        area.appendChild(optContainer);
+        const typeIcons = {
+            'mcq': '<i class="fas fa-list-ul"></i> MCQ',
+            'fill-blank': '<i class="fas fa-pen"></i> Fill Blank',
+            'coding': '<i class="fas fa-code"></i> Coding',
+            'essay': '<i class="fas fa-align-left"></i> Essay',
+            'drag-drop': '<i class="fas fa-arrows-alt"></i> Drag & Drop',
+            'matching': '<i class="fas fa-random"></i> Matching',
+            'case-study': '<i class="fas fa-briefcase"></i> Case',
+            'simulation': '<i class="fas fa-gamepad"></i> Sim'
+        };
+        const currentType = q.type || 'mcq';
+        document.getElementById('aq-q-type-badge').innerHTML = typeIcons[currentType] || typeIcons['mcq'];
+
+        if (currentType === 'mcq') {
+            const optContainer = document.createElement('div');
+            optContainer.className = 'aq-options';
+
+            q.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'aq-option-btn';
+                btn.setAttribute('data-index', i);
+                btn.innerHTML = `
+                    <span class="aq-opt-letter">${String.fromCharCode(65 + i)}</span>
+                    <span class="aq-opt-text">${opt}</span>
+                    <span class="aq-opt-indicator"></span>
+                `;
+                btn.addEventListener('click', () => selectAnswer(i, btn, optContainer, q));
+                optContainer.appendChild(btn);
+            });
+            area.appendChild(optContainer);
+        } else if (currentType === 'fill-blank') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'aq-input-text';
+            input.placeholder = 'اكتب إجابتك هنا... | Type your answer here...';
+            area.appendChild(input);
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'aq-submit-btn';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الإجابة | Submit Answer';
+            submitBtn.onclick = () => processComplexAnswer(input.value.trim(), submitBtn, input, q);
+            area.appendChild(submitBtn);
+        } else if (currentType === 'coding') {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'aq-textarea aq-code-editor';
+            textarea.placeholder = '# اكتب الكود الخاص بك هنا... | Write your code here...';
+            area.appendChild(textarea);
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'aq-submit-btn';
+            submitBtn.innerHTML = '<i class="fas fa-play"></i> تشغيل الكود | Run Code';
+            submitBtn.onclick = () => processComplexAnswer(textarea.value.trim(), submitBtn, textarea, q);
+            area.appendChild(submitBtn);
+        } else if (currentType === 'essay') {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'aq-textarea';
+            textarea.placeholder = 'اكتب الشرح هنا... | Write your explanation here...';
+            area.appendChild(textarea);
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'aq-submit-btn';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال المقال | Submit Essay';
+            submitBtn.onclick = () => processComplexAnswer(textarea.value.trim(), submitBtn, textarea, q);
+            area.appendChild(submitBtn);
+        } else if (currentType === 'drag-drop') {
+            const container = document.createElement('div');
+            container.className = 'aq-drag-container';
+            // Show options to user; Mocking drag functionality by sorting randomly for user to mentally order, then clicking submit to "approve"
+            [...(q.options||[])].sort(()=>Math.random() - 0.5).forEach((opt, i) => {
+                const item = document.createElement('div');
+                item.className = 'aq-drag-item';
+                item.innerHTML = `<i class="fas fa-grip-lines"></i> ${opt}`;
+                container.appendChild(item);
+            });
+            area.appendChild(container);
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'aq-submit-btn';
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> تأكيد الترتيب | Submit Order';
+            submitBtn.onclick = () => processComplexAnswer(q.options, submitBtn, container, q);
+            area.appendChild(submitBtn);
+        } else if (currentType === 'matching') {
+            const container = document.createElement('div');
+            const rightOptions = [...(q.correctAnswer||[])].sort(() => Math.random() - 0.5);
+            (q.pairs||[]).forEach(pair => {
+                const row = document.createElement('div');
+                row.className = 'aq-match-row';
+                const selectBox = document.createElement('select');
+                selectBox.className = 'aq-match-select';
+                selectBox.innerHTML = `<option value="">-- اختر الإجابة --</option>` + rightOptions.map(o => `<option value="${o}">${o}</option>`).join('');
+                row.innerHTML = `<div class="aq-match-left">${pair.left}</div><div class="aq-match-right"></div>`;
+                row.querySelector('.aq-match-right').appendChild(selectBox);
+                container.appendChild(row);
+            });
+            area.appendChild(container);
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'aq-submit-btn';
+            submitBtn.innerHTML = '<i class="fas fa-link"></i> تأكيد المطابقة | Check Matches';
+            submitBtn.onclick = () => {
+                const selects = container.querySelectorAll('.aq-match-select');
+                const userAns = Array.from(selects).map(s => s.value);
+                processComplexAnswer(userAns, submitBtn, container, q);
+            };
+            area.appendChild(submitBtn);
+        } else if (currentType === 'case-study' || currentType === 'simulation') {
+            if (q.context) {
+                const ctxBox = document.createElement('div');
+                ctxBox.className = 'aq-context-box';
+                ctxBox.innerHTML = `<h4>💡 سياق الحالة | Context</h4>${q.context}`;
+                area.appendChild(ctxBox);
+            }
+            if (q.subQuestions) {
+                const subBox = document.createElement('div');
+                subBox.className = 'aq-sub-qs';
+                subBox.innerHTML = q.subQuestions.map(sq => `<p>📍 ${sq}</p>`).join('');
+                area.appendChild(subBox);
+            }
+            const textarea = document.createElement('textarea');
+            textarea.className = 'aq-textarea';
+            textarea.placeholder = currentType === 'simulation' ? 'اكتب نتيجة إجراءك هنا... | Simulation output or action...' : 'اكتب تحليلك هنا... | Your analysis...';
+            area.appendChild(textarea);
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'aq-submit-btn';
+            submitBtn.innerHTML = currentType === 'simulation' ? `<i class="fas fa-bolt"></i> ${q.actionBtnText || 'Run Simulation'}` : '<i class="fas fa-search"></i> تقديم التحليل | Submit Analysis';
+            submitBtn.onclick = () => processComplexAnswer(textarea.value.trim(), submitBtn, textarea, q);
+            area.appendChild(submitBtn);
+        }
 
         startTimer();
 
@@ -438,6 +570,9 @@
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Select answer
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────
+    // Select MCQ answer
+    // ─────────────────────────────────────────────
     function selectAnswer(index, btn, container, q) {
         if (state.answered) return;
         state.answered = true;
@@ -452,6 +587,43 @@
             if (i === index && !isCorrect) b.classList.add('wrong-opt');
         });
 
+        finishAnswer(isCorrect, index, q);
+        showFeedback(isCorrect, q);
+        setTimeout(() => showAITutor(state.currentIndex, isCorrect, q), 600);
+        document.getElementById('aq-next-btn').disabled = false;
+    }
+
+    // ─────────────────────────────────────────────
+    // Process Complex Types (Coding, Essay, etc.)
+    // ─────────────────────────────────────────────
+    function processComplexAnswer(userAns, btn, container, q) {
+        if (state.answered) return;
+        state.answered = true;
+        clearInterval(state.timerInterval);
+        document.getElementById('aq-skip-btn').disabled = true;
+        if (btn) btn.disabled = true;
+        if (container && container.disabled !== undefined) container.disabled = true;
+
+        let isCorrect = true; 
+        if (q.type === 'fill-blank' && typeof q.correctAnswer === 'string') {
+            isCorrect = userAns.toLowerCase() === q.correctAnswer.toLowerCase();
+        }
+
+        finishAnswer(isCorrect, userAns, q);
+        
+        const fb = document.getElementById('aq-feedback');
+        fb.className = 'aq-feedback fb-correct'; 
+        document.getElementById('aq-feedback-icon').innerHTML = '<i class="fas fa-robot"></i>';
+        document.getElementById('aq-feedback-title').textContent = '🤖 جاري تحليل الإجابة | AI Analyzing...';
+        document.getElementById('aq-feedback-text').textContent = 'The AI Tutor is comparing your answer to the perfect solution.';
+        fb.style.display = 'flex';
+        fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        setTimeout(() => showAITutorComplex(q.correctAnswer, userAns, q), 1200);
+        document.getElementById('aq-next-btn').disabled = false;
+    }
+
+    function finishAnswer(isCorrect, userAns, q) {
         if (isCorrect) {
             state.score++;
             state.streak++;
@@ -474,16 +646,12 @@
         state.userAnswers.push({
             questionIndex: state.currentIndex,
             question: q.question,
-            options: q.options,
-            userAnswer: index,
+            options: q.options || [],
+            userAnswer: userAns,
             correctAnswer: q.correctAnswer,
             isCorrect,
             topic: q.topic || 'virtual-env'
         });
-
-        showFeedback(isCorrect, q);
-        setTimeout(() => showAITutor(state.currentIndex, isCorrect, q), 600);
-        document.getElementById('aq-next-btn').disabled = false;
     }
 
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -567,6 +735,48 @@
         state.hintsUsed++;
     }
 
+    // ─────────────────────────────────────────────
+    // AI Tutor for complex dynamic question types
+    // ─────────────────────────────────────────────
+    function showAITutorComplex(correctAnswer, userAnswer, q) {
+        const tutor = document.getElementById('aq-ai-tutor');
+        const msg = document.getElementById('ai-tutor-message');
+        const typingLabel = document.getElementById('ai-typing-label');
+        const stepsContainer = document.getElementById('ai-step-by-step');
+        const stepsList = document.getElementById('ai-steps-list');
+        const stepTitle = stepsContainer.querySelector('h5');       
+
+        tutor.style.display = 'block';
+        typingLabel.textContent = '🤖 المعلم الذكي يحلل إجابتك... | AI Tutor is analyzing...';
+        msg.textContent = '';
+        stepsContainer.style.display = 'none';
+
+        if (stepTitle) stepTitle.innerHTML = '<i class="fas fa-check-circle"></i> الإجابة النموذجية | Perfect Answer';
+
+        // Format correct answer nicely if it's an array
+        let perfectAnsText = Array.isArray(correctAnswer) ? '<br>• ' + correctAnswer.join('<br>• ') : correctAnswer;
+        if(q.type === 'coding') perfectAnsText = `<pre style="background:#0d0f1a;padding:10px;border-radius:8px;color:#00ff00;direction:ltr;margin-top:10px;">${correctAnswer}</pre>`;
+
+        const mainMsg = `لقد قمت بتحليل تفاصيل استجابتك. بناءً على معايير نظامنا، إليك الإجابة النموذجية المثالية (Perfect Answer) مقارنةً بما قدمته: | I've analyzed your details. based on our criteria, here is the perfect answer:`;
+        
+        let i = 0;
+        typingLabel.textContent = '⌨️ يكتب التحليل... | Typing analysis...';
+
+        const typeInterval = setInterval(() => {
+            msg.textContent += mainMsg[i];
+            i++;
+            if (i >= mainMsg.length) {
+                clearInterval(typeInterval);
+                typingLabel.textContent = '🤖 المعلم الذكي | AI Tutor';
+
+                stepsContainer.style.display = 'block';
+                stepsList.innerHTML = `<li style="margin-bottom:6px;line-height:1.7;font-weight:bold;color:#22c55e;">${perfectAnsText}</li>`;
+            }
+        }, 14);
+
+        tutor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     function skipQuestion() {
         if (state.answered) return;
         clearInterval(state.timerInterval);
@@ -576,7 +786,7 @@
         state.userAnswers.push({
             questionIndex: state.currentIndex,
             question: q.question,
-            options: q.options,
+            options: q.options || [],
             userAnswer: null,
             correctAnswer: q.correctAnswer,
             isCorrect: false,
