@@ -97,15 +97,42 @@
                 <div class="ai-tutor-header">
                     <div class="ai-tutor-avatar"><i class="fas fa-robot"></i></div>
                     <div>
-                        <h4>AI Tutor</h4>
+                        <h4>🤖 AI Tutor — التحليل التعليمي</h4>
                         <span class="ai-typing-label" id="ai-typing-label">Thinking...</span>
                     </div>
                 </div>
-                <div class="ai-tutor-message" id="ai-tutor-message"></div>
-                <div class="ai-step-by-step" id="ai-step-by-step" style="display:none">
-                    <h5><i class="fas fa-list-ol"></i> Step-by-Step Explanation</h5>
-                    <ol class="ai-steps-list" id="ai-steps-list"></ol>
+                <!-- Rich structured tutor body -->
+                <div id="ai-tutor-body" style="display:none">
+                    <!-- Section 1: Why wrong (only on incorrect) -->
+                    <div id="ai-section-wrong" style="display:none;margin-bottom:14px;padding:12px 16px;border-radius:10px;background:rgba(239,68,68,0.08);border-left:3px solid #ef4444">
+                        <div style="font-weight:700;color:#ef4444;margin-bottom:6px">❌ لماذا إجابتك خاطئة | Why Your Answer Was Wrong</div>
+                        <div id="ai-wrong-text" style="line-height:1.8;font-size:0.92rem"></div>
+                    </div>
+                    <!-- Section 2: Why correct -->
+                    <div id="ai-section-correct" style="margin-bottom:14px;padding:12px 16px;border-radius:10px;background:rgba(34,197,94,0.08);border-left:3px solid #22c55e">
+                        <div style="font-weight:700;color:#22c55e;margin-bottom:6px">✅ الإجابة الصحيحة | The Correct Answer</div>
+                        <div id="ai-correct-text" style="line-height:1.8;font-size:0.92rem"></div>
+                    </div>
+                    <!-- Section 3: Key concept -->
+                    <div id="ai-section-concept" style="margin-bottom:14px;padding:12px 16px;border-radius:10px;background:rgba(108,99,255,0.08);border-left:3px solid #6c63ff">
+                        <div style="font-weight:700;color:#6c63ff;margin-bottom:6px">📚 المفهوم الأساسي | Key Concept</div>
+                        <div id="ai-concept-text" style="line-height:1.8;font-size:0.92rem"></div>
+                    </div>
+                    <!-- Section 4: Step-by-step -->
+                    <div id="ai-section-steps" style="margin-bottom:14px;padding:12px 16px;border-radius:10px;background:rgba(247,147,30,0.08);border-left:3px solid #f7931e">
+                        <div style="font-weight:700;color:#f7931e;margin-bottom:8px">🔢 خطوات الفهم | Step-by-Step</div>
+                        <ol id="ai-steps-list" style="margin:0;padding-left:20px;line-height:1.9;font-size:0.92rem"></ol>
+                    </div>
+                    <!-- Section 5: Real-world application -->
+                    <div id="ai-section-realworld" style="padding:12px 16px;border-radius:10px;background:rgba(168,85,247,0.08);border-left:3px solid #a855f7">
+                        <div style="font-weight:700;color:#a855f7;margin-bottom:6px">🌍 تطبيق في الواقع | Real-World Application</div>
+                        <div id="ai-realworld-text" style="line-height:1.8;font-size:0.92rem"></div>
+                    </div>
                 </div>
+                <!-- Typing placeholder -->
+                <div class="ai-tutor-message" id="ai-tutor-message"></div>
+                <!-- Legacy fallback (hidden) -->
+                <div id="ai-step-by-step" style="display:none"><ol id="ai-steps-list-legacy"></ol></div>
             </div>
 
             <!-- Action Buttons -->
@@ -319,17 +346,46 @@
     // ������������������������������������������������������������������������������������������
     // Get explanation for a question
     // ������������������������������������������������������������������������������������������
+    // keyword → explanation index map for cybersecurity
+    const cyberKeywords = [
+        ['cybersecurity','\u0623\u0645\u0646 \u0633\u064a\u0628\u0631\u0627\u0646\u064a','\u0645\u0627 \u0647\u0648 \u062a\u0639\u0631\u064a\u0641'],
+        ['phishing','\u062a\u0635\u064a\u062f','\u0627\u062d\u062a\u064a\u0627\u0644','\u0641\u064a\u0634\u064a\u0646\u062c'],
+        ['vpn','virtual private','\u0634\u0628\u0643\u0629 \u062e\u0627\u0635\u0629'],
+        ['firewall','\u062c\u062f\u0627\u0631 \u0627\u0644\u062d\u0645\u0627\u064a\u0629'],
+        ['malware','\u062e\u0628\u064a\u062b','\u0628\u0631\u0645\u062c\u064a\u0627\u062a \u062e\u0628\u064a\u062b\u0629'],
+        ['https','http','\u062a\u0634\u0641\u064a\u0631 \u0627\u0644\u0627\u062a\u0635\u0627\u0644'],
+        ['ransomware','\u0641\u062f\u064a\u0629'],
+        ['2fa','two-factor','\u062b\u0646\u0627\u0626\u064a'],
+        ['sql injection','sql','\u062d\u0642\u0646'],
+        ['man-in-the-middle','mitm'],
+        ['ddos','denial of service','\u0625\u063a\u0631\u0627\u0642'],
+        ['brute force','\u0643\u0644\u0645\u0627\u062a \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u0645\u0645\u0643\u0646\u0629'],
+        ['zero-day','zero day','\u062b\u063a\u0631\u0629 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629'],
+        ['least privilege','\u0623\u062f\u0646\u0649 \u0627\u0644\u0635\u0644\u0627\u062d\u064a\u0627\u062a'],
+        ['encryption','\u062a\u0634\u0641\u064a\u0631','\u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a'],
+        ['social engineering','\u0647\u0646\u062f\u0633\u0629 \u0627\u062c\u062a\u0645\u0627\u0639\u064a\u0629'],
+        ['penetration','pen test','\u0627\u062e\u062a\u0628\u0627\u0631 \u0627\u062e\u062a\u0631\u0627\u0642'],
+        ['trojan','\u062d\u0635\u0627\u0646 \u0637\u0631\u0648\u0627\u062f\u0629'],
+        ['software update','\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0628\u0631\u0627\u0645\u062c','\u0633\u062f \u0627\u0644\u062b\u063a\u0631\u0627\u062a'],
+        ['keylogger','\u0644\u0648\u062d\u0629 \u0627\u0644\u0645\u0641\u0627\u062a\u064a\u062d'],
+        ['cia triad','cia','confidentiality','integrity','availability'],
+        ['botnet','\u0634\u0628\u0643\u0629 \u0623\u062c\u0647\u0632\u0629 \u0645\u062e\u062a\u0631\u0642\u0629','zombie']
+    ];
+
     function getExplanation(q, qIndex) {
         const topic = q.topic || 'virtual-env';
         const explanations = aiExplanationsByTopic[topic] || aiExplanationsByTopic['virtual-env'];
-
-        // If cybersecurity, match by topic-specific index based on the question's position among cyber questions
         if (topic === 'cybersecurity') {
-            const cyberQs = state.questions.filter(x => x.topic === 'cybersecurity');
-            const localIndex = cyberQs.indexOf(q);
-            return explanations[((localIndex >= 0 ? localIndex : qIndex)) % explanations.length];
+            const qText = (q.question + ' ' + (q.options || []).join(' ')).toLowerCase();
+            for (let i = 0; i < cyberKeywords.length; i++) {
+                if (cyberKeywords[i].some(kw => qText.includes(kw.toLowerCase()))) {
+                    return explanations[Math.min(i, explanations.length - 1)];
+                }
+            }
         }
-        return explanations[qIndex % explanations.length];
+        // Deterministic seed for virtual-env (avoids shuffle-based drift)
+        const seed = ((q.correctAnswer || 0) + (q.question.length % 3)) % explanations.length;
+        return explanations[seed];
     }
 
     // ������������������������������������������������������������������������������������������
@@ -482,7 +538,7 @@
         });
 
         showFeedback(isCorrect, q);
-        setTimeout(() => showAITutor(state.currentIndex, isCorrect, q), 600);
+        setTimeout(() => showAITutor(state.currentIndex, isCorrect, q, index), 600);
         document.getElementById('aq-next-btn').disabled = false;
     }
 
@@ -513,12 +569,68 @@
     // ������������������������������������������������������������������������������������������
     // AI Tutor (bilingual typing effect)
     // ������������������������������������������������������������������������������������������
-    function showAITutor(qIndex, isCorrect, q) {
+    function showAITutor(qIndex, isCorrect, q, userAnswerIndex) {
         const tutor = document.getElementById('aq-ai-tutor');
-        const msg = document.getElementById('ai-tutor-message');
         const typingLabel = document.getElementById('ai-typing-label');
-        const stepsContainer = document.getElementById('ai-step-by-step');
-        const stepsList = document.getElementById('ai-steps-list');
+        const placeholder = document.getElementById('ai-tutor-message');
+        const body = document.getElementById('ai-tutor-body');
+
+        tutor.style.display = 'block';
+        body.style.display = 'none';
+        placeholder.textContent = '\uD83E\uDD16 \u0627\u0644\u0645\u0639\u0644\u0645 \u0627\u0644\u0630\u0643\u064a \u064a\u062d\u0644\u0651\u0644 \u0625\u062c\u0627\u0628\u062a\u0643... | AI Tutor is analysing...';
+        placeholder.style.display = 'block';
+        typingLabel.textContent = '\u23F3 \u062c\u0627\u0631\u0650 \u0627\u0644\u062a\u062d\u0644\u064a\u0644...';
+
+        const explanation = getExplanation(q, qIndex);
+        const correctOpt = (q.options && q.options[q.correctAnswer] !== undefined) ? q.options[q.correctAnswer] : '';
+        const userOpt = (userAnswerIndex !== undefined && userAnswerIndex !== null && q.options && q.options[userAnswerIndex] !== undefined)
+            ? q.options[userAnswerIndex] : null;
+
+        const wrongText = isCorrect ? '' : (userOpt
+            ? '\u0627\u062e\u062a\u0631\u062a: "\u202A' + userOpt + '\u202C"\n\u0647\u0630\u0627 \u0627\u0644\u062e\u064a\u0627\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d \u0644\u0623\u0646\u0647 \u0644\u0627 \u064a\u0635\u0641 \u0627\u0644\u0645\u0641\u0647\u0648\u0645 \u0628\u062f\u0642\u0629 \u2014 \u0642\u062f \u064a\u0643\u0648\u0646 \u0635\u062d\u064a\u062d\u064b\u0627 \u062c\u0632\u0626\u064a\u064b\u0627 \u0644\u0643\u0646\u0647 \u064a\u0641\u062a\u0642\u0631 \u0644\u0644\u0633\u0645\u0629 \u0627\u0644\u062a\u0639\u0631\u064a\u0641\u064a\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629.\n\nYou selected: "' + userOpt + '"\nThis option is incorrect \u2014 it may be partially related but does not accurately define the core concept.'
+            : '\u0627\u0646\u062a\u0647\u0649 \u0627\u0644\u0648\u0642\u062a \u0623\u0648 \u062a\u0645 \u062a\u062e\u0637\u064a \u0627\u0644\u0633\u0624\u0627\u0644. \u0631\u0627\u062c\u0639 \u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0623\u062f\u0646\u0627\u0647.\nTime expired or skipped \u2014 review the correct answer below.');
+
+        const correctText = correctOpt
+            ? '\u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u0635\u062d\u064a\u062d\u0629: "' + correctOpt + '"\nThe correct answer: "' + correctOpt + '"\n\n' + (isCorrect ? '\u2705 \u0623\u062d\u0633\u0646\u062a! \u0627\u062e\u062a\u0631\u062a \u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u0635\u062d\u064a\u062d\u0629.' : '\u{1F4CC} \u062a\u0630\u0643\u0651\u0631 \u0647\u0630\u0627 \u0627\u0644\u062e\u064a\u0627\u0631 \u0641\u064a \u0627\u0644\u0645\u0631\u0629 \u0627\u0644\u0642\u0627\u062f\u0645\u0629.')
+            : (isCorrect ? '\u2705 \u0625\u062c\u0627\u0628\u0629 \u0635\u062d\u064a\u062d\u0629!' : '\u0631\u0627\u062c\u0639 \u0627\u0644\u0645\u0641\u0647\u0648\u0645 \u0623\u062f\u0646\u0627\u0647.');
+
+        const conceptText = explanation.message || '';
+        const steps = explanation.steps || [];
+        const realWorld = steps.length > 0 ? steps[steps.length - 1] : '\u0637\u0628\u0651\u0642 \u0647\u0630\u0627 \u0627\u0644\u0645\u0641\u0647\u0648\u0645 \u0641\u064a \u0645\u0634\u0627\u0631\u064a\u0639\u0643 \u0627\u0644\u062d\u0642\u064a\u0642\u064a\u0629. | Apply this concept in real-world projects.';
+        const stepItems = steps.length > 1 ? steps.slice(0, -1) : steps;
+
+        setTimeout(function() {
+            placeholder.style.display = 'none';
+            body.style.display = 'block';
+            typingLabel.textContent = '\uD83E\uDD16 \u0627\u0644\u0645\u0639\u0644\u0645 \u0627\u0644\u0630\u0643\u064a | AI Tutor';
+
+            var sWrong = document.getElementById('ai-section-wrong');
+            if (sWrong) { sWrong.style.display = isCorrect ? 'none' : 'block'; }
+            var wrongEl = document.getElementById('ai-wrong-text');
+            if (wrongEl) wrongEl.textContent = wrongText;
+
+            var correctEl = document.getElementById('ai-correct-text');
+            if (correctEl) correctEl.textContent = correctText;
+
+            var conceptEl = document.getElementById('ai-concept-text');
+            if (conceptEl) {
+                conceptEl.textContent = '';
+                var ci = 0;
+                var typeInterval = setInterval(function() {
+                    conceptEl.textContent += conceptText[ci++];
+                    if (ci >= conceptText.length) clearInterval(typeInterval);
+                }, 12);
+            }
+
+            var stepsList2 = document.getElementById('ai-steps-list');
+            if (stepsList2) stepsList2.innerHTML = stepItems.map(function(s) { return '<li style="margin-bottom:8px">' + s + '</li>'; }).join('');
+
+            var rwEl = document.getElementById('ai-realworld-text');
+            if (rwEl) rwEl.textContent = realWorld;
+
+            tutor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 800);
+    }
         const stepTitle = stepsContainer.querySelector('h5');
 
         tutor.style.display = 'block';
@@ -625,7 +737,7 @@
                     fb.style.display = 'flex';
                     state.answered = true;
                     document.getElementById('aq-next-btn').disabled = false;
-                    setTimeout(() => showAITutor(state.currentIndex, false, q), 600);
+                    setTimeout(() => showAITutor(state.currentIndex, false, q, null), 600);
                 }
             }
         }, 1000);

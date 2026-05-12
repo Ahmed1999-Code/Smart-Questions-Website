@@ -36,6 +36,10 @@
             <a href="#" class="sidebar-link" onclick="showSection('leaderboard')">
                 <i class="fas fa-crown"></i><span>Leaderboard</span>
             </a>
+            <a href="#" class="sidebar-link sidebar-link-special" id="specify-qtype-btn" onclick="openFieldModal()" title="Specify Question Type">
+                <i class="fas fa-sliders-h"></i><span>Specify Question Type</span>
+                <span class="sidebar-link-badge">NEW</span>
+            </a>
             <div class="sidebar-divider"></div>
             <a href="index.html" class="sidebar-link">
                 <i class="fas fa-home"></i><span>Home</span>
@@ -220,19 +224,39 @@
                             <h3><i class="fas fa-play-circle"></i> Quick Start</h3>
                         </div>
                         <div class="quick-modes">
-                            <button class="quick-mode-btn adaptive" onclick="startQuiz('adaptive')">
+                            <!-- Active Field Banner (shown when questions are configured) -->
+                            <div class="active-field-banner" id="active-field-banner" style="display:none">
+                                <div class="afb-left">
+                                    <div class="afb-icon"><i class="fas fa-check-circle"></i></div>
+                                    <div>
+                                        <div class="afb-label">Active Question Field</div>
+                                        <div class="afb-field" id="afb-field-name">—</div>
+                                    </div>
+                                </div>
+                                <button class="afb-change-btn" onclick="openFieldModal()">
+                                    <i class="fas fa-sliders-h"></i> Change
+                                </button>
+                            </div>
+                            <!-- No-questions setup prompt (shown when no questions configured) -->
+                            <div class="no-questions-banner" id="no-questions-banner" style="display:none">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span>No exam questions configured yet.</span>
+                                <button onclick="openFieldModal()"><i class="fas fa-plus"></i> Set Up Now</button>
+                            </div>
+
+                            <button class="quick-mode-btn adaptive" onclick="startCustomQuiz()">
                                 <div class="qm-icon"><i class="fas fa-brain"></i></div>
                                 <div class="qm-info">
-                                    <strong>Adaptive Quiz</strong>
-                                    <span>AI adjusts difficulty for you</span>
+                                    <strong>Start Exam</strong>
+                                    <span>Run your configured questions</span>
                                 </div>
                                 <i class="fas fa-chevron-right qm-arrow"></i>
                             </button>
-                            <button class="quick-mode-btn practice" onclick="startQuiz('practice')">
-                                <div class="qm-icon"><i class="fas fa-dumbbell"></i></div>
+                            <button class="quick-mode-btn practice" onclick="openFieldModal()">
+                                <div class="qm-icon"><i class="fas fa-sliders-h"></i></div>
                                 <div class="qm-info">
-                                    <strong>Practice Mode</strong>
-                                    <span>Focus on weak topics</span>
+                                    <strong>Specify Question Type</strong>
+                                    <span>Change field &amp; upload questions</span>
                                 </div>
                                 <i class="fas fa-chevron-right qm-arrow"></i>
                             </button>
@@ -649,6 +673,264 @@
 
     </main>
 
+    <!-- ========== SPECIFY QUESTION TYPE MODAL ========== -->
+    <div class="sqt-overlay" id="sqt-overlay" onclick="closeSqtModal(event)">
+        <div class="sqt-modal" id="sqt-modal">
+            <button class="sqt-close" onclick="closeFieldModal()"><i class="fas fa-times"></i></button>
+            <div class="sqt-header">
+                <div class="sqt-header-icon"><i class="fas fa-sliders-h"></i></div>
+                <h2>Specify Question Type</h2>
+                <p>Choose an academic field to configure exam questions for that discipline</p>
+            </div>
+
+            <!-- Predefined Fields -->
+            <div class="sqt-fields-grid" id="sqt-fields-grid">
+                <button class="sqt-field-btn" data-field="Medicine" onclick="selectField(this)">
+                    <i class="fas fa-heartbeat"></i>
+                    <span>Medicine</span>
+                    <small>الطب</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Engineering" onclick="selectField(this)">
+                    <i class="fas fa-cogs"></i>
+                    <span>Engineering</span>
+                    <small>الهندسة</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Law" onclick="selectField(this)">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>Law</span>
+                    <small>القانون</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Computer Science" onclick="selectField(this)">
+                    <i class="fas fa-laptop-code"></i>
+                    <span>Computer Science</span>
+                    <small>علوم الحاسوب</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Business" onclick="selectField(this)">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Business</span>
+                    <small>إدارة الأعمال</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Pharmacy" onclick="selectField(this)">
+                    <i class="fas fa-pills"></i>
+                    <span>Pharmacy</span>
+                    <small>الصيدلة</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Dentistry" onclick="selectField(this)">
+                    <i class="fas fa-tooth"></i>
+                    <span>Dentistry</span>
+                    <small>طب الأسنان</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Architecture" onclick="selectField(this)">
+                    <i class="fas fa-drafting-compass"></i>
+                    <span>Architecture</span>
+                    <small>العمارة</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Education" onclick="selectField(this)">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <span>Education</span>
+                    <small>التربية</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Sciences" onclick="selectField(this)">
+                    <i class="fas fa-flask"></i>
+                    <span>Sciences</span>
+                    <small>العلوم</small>
+                </button>
+                <button class="sqt-field-btn" data-field="Arts" onclick="selectField(this)">
+                    <i class="fas fa-palette"></i>
+                    <span>Arts</span>
+                    <small>الفنون</small>
+                </button>
+                <button class="sqt-field-btn sqt-custom-btn" data-field="" onclick="selectField(this)" id="sqt-custom-field-btn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Custom Field</span>
+                    <small>حقل مخصص</small>
+                </button>
+            </div>
+
+            <!-- Custom field input (hidden by default) -->
+            <div class="sqt-custom-input-wrap" id="sqt-custom-wrap" style="display:none">
+                <label><i class="fas fa-pen"></i> Enter your custom field name:</label>
+                <input type="text" id="sqt-custom-input" placeholder="e.g. Nursing, Geology, Physics..." maxlength="60">
+            </div>
+
+            <!-- Selected field display -->
+            <div class="sqt-selected-display" id="sqt-selected-display" style="display:none">
+                <i class="fas fa-check-circle"></i>
+                <span>Selected: <strong id="sqt-selected-name"></strong></span>
+            </div>
+
+            <button class="sqt-proceed-btn" id="sqt-proceed-btn" onclick="proceedToFeed()" disabled>
+                <i class="fas fa-arrow-right"></i>
+                Proceed to Add Questions
+            </button>
+        </div>
+    </div>
+
+    <style>
+    /* ---- Sidebar special link ---- */
+    .sidebar-link-special { border-top: 1px solid rgba(255,255,255,0.06); margin-top: 4px; padding-top: 12px; }
+    .sidebar-link-badge {
+        margin-left: auto; padding: 2px 7px; border-radius: 20px;
+        background: linear-gradient(135deg,#6c63ff,#a855f7); color:#fff;
+        font-size: 0.6rem; font-weight: 800; letter-spacing: 0.5px;
+    }
+
+    /* ---- Modal Overlay ---- */
+    .sqt-overlay {
+        position: fixed; inset: 0; z-index: 2000;
+        background: rgba(10,12,24,0.88); backdrop-filter: blur(10px);
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+    .sqt-overlay.active { opacity: 1; pointer-events: all; }
+
+    .sqt-modal {
+        background: var(--card, #1a1c2e);
+        border: 1px solid rgba(108,99,255,0.25);
+        border-radius: 24px; padding: 36px 32px;
+        max-width: 680px; width: 94%;
+        max-height: 90vh; overflow-y: auto;
+        position: relative;
+        transform: translateY(30px) scale(0.96);
+        transition: transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+        box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(108,99,255,0.1);
+    }
+    .sqt-overlay.active .sqt-modal { transform: translateY(0) scale(1); }
+
+    .sqt-close {
+        position: absolute; top: 16px; right: 16px;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+        color: #9ba3c0; width: 34px; height: 34px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+    }
+    .sqt-close:hover { background: rgba(239,68,68,0.15); color: #ef4444; transform: rotate(90deg); }
+
+    .sqt-header { text-align: center; margin-bottom: 28px; }
+    .sqt-header-icon {
+        width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
+        background: linear-gradient(135deg,#6c63ff,#a855f7);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem; color: #fff;
+        box-shadow: 0 8px 24px rgba(108,99,255,0.4);
+    }
+    .sqt-header h2 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem;
+        font-weight: 800; color: var(--text, #e8eaf0); margin-bottom: 8px;
+    }
+    .sqt-header p { color: var(--text2, #9ba3c0); font-size: 0.92rem; line-height: 1.5; }
+
+    /* Field grid */
+    .sqt-fields-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px; margin-bottom: 20px;
+    }
+    .sqt-field-btn {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        padding: 16px 8px; border-radius: 14px;
+        background: rgba(255,255,255,0.04);
+        border: 1.5px solid rgba(255,255,255,0.07);
+        color: var(--text, #e8eaf0); cursor: pointer;
+        transition: all 0.2s; text-align: center;
+        font-family: 'Inter', sans-serif;
+    }
+    .sqt-field-btn i { font-size: 1.5rem; color: #6c63ff; transition: color 0.2s; }
+    .sqt-field-btn span { font-size: 0.85rem; font-weight: 600; }
+    .sqt-field-btn small { font-size: 0.7rem; color: #9ba3c0; }
+    .sqt-field-btn:hover {
+        background: rgba(108,99,255,0.12);
+        border-color: rgba(108,99,255,0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(108,99,255,0.2);
+    }
+    .sqt-field-btn.selected {
+        background: rgba(108,99,255,0.18);
+        border-color: #6c63ff;
+        box-shadow: 0 0 0 2px rgba(108,99,255,0.3);
+    }
+    .sqt-field-btn.selected i { color: #a855f7; }
+    .sqt-custom-btn i { color: #10b981; }
+    .sqt-custom-btn:hover i { color: #10b981; }
+
+    /* Custom input */
+    .sqt-custom-input-wrap {
+        margin-bottom: 16px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(108,99,255,0.2);
+        border-radius: 12px; padding: 16px;
+    }
+    .sqt-custom-input-wrap label {
+        display: block; font-size: 0.82rem; font-weight: 600;
+        color: #9ba3c0; margin-bottom: 8px;
+    }
+    .sqt-custom-input-wrap input {
+        width: 100%; background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(108,99,255,0.25); border-radius: 8px;
+        padding: 10px 14px; color: var(--text, #e8eaf0);
+        font-family: 'Inter', sans-serif; font-size: 0.9rem;
+        outline: none; transition: border-color 0.2s; box-sizing: border-box;
+    }
+    .sqt-custom-input-wrap input:focus { border-color: #6c63ff; }
+
+    /* Selected display */
+    .sqt-selected-display {
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25);
+        border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+        color: #10b981; font-size: 0.9rem; font-weight: 600;
+    }
+    .sqt-selected-display i { font-size: 1.1rem; }
+    .sqt-selected-display strong { color: #e8eaf0; }
+
+    /* Proceed button */
+    .sqt-proceed-btn {
+        width: 100%; padding: 14px; border-radius: 12px;
+        background: linear-gradient(135deg,#6c63ff,#a855f7);
+        color: #fff; font-size: 1rem; font-weight: 700;
+        border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 16px rgba(108,99,255,0.35);
+    }
+    .sqt-proceed-btn:disabled {
+        opacity: 0.4; cursor: not-allowed; box-shadow: none;
+    }
+    .sqt-proceed-btn:not(:disabled):hover {
+        transform: translateY(-2px); box-shadow: 0 8px 24px rgba(108,99,255,0.5);
+    }
+    /* ---- Active Field Banner ---- */
+    .active-field-banner {
+        display: flex; align-items: center; justify-content: space-between;
+        background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.22);
+        border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+    }
+    .afb-left { display: flex; align-items: center; gap: 10px; }
+    .afb-icon { color: #10b981; font-size: 1.1rem; }
+    .afb-label { font-size: 0.7rem; font-weight: 700; color: #9ba3c0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .afb-field { font-size: 0.95rem; font-weight: 800; color: #e8eaf0; }
+    .afb-change-btn {
+        padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;
+        background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.25);
+        color: #a78bfa; cursor: pointer; font-family: 'Inter',sans-serif;
+        display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+    }
+    .afb-change-btn:hover { background: rgba(108,99,255,0.22); color: #fff; }
+    .no-questions-banner {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        background: rgba(247,147,30,0.07); border: 1px solid rgba(247,147,30,0.2);
+        border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+        color: #f7931e; font-size: 0.85rem; font-weight: 600;
+    }
+    .no-questions-banner button {
+        margin-left: auto; padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;
+        background: rgba(247,147,30,0.15); border: 1px solid rgba(247,147,30,0.3);
+        color: #f7931e; cursor: pointer; font-family: 'Inter',sans-serif;
+        display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+    }
+    .no-questions-banner button:hover { background: rgba(247,147,30,0.28); }
+    </style>
+
     <script src="platform.js"></script>
     <script>
     // ---- User Data ---- (robust auth guard with fallback)
@@ -804,8 +1086,133 @@
         window.location.href = 'auth.html';
     }
 
+    // ---- Active Field / Questions Persistence per email ----
+    function getUserEmail() {
+        try { return (JSON.parse(localStorage.getItem('eduai_current_user') || '{}').email || '').toLowerCase().trim(); } catch(e) { return ''; }
+    }
+
+    function getUserField() {
+        const email = getUserEmail();
+        return email ? (localStorage.getItem('eduai_field_' + email) || '') : '';
+    }
+
+    function getUserQuestions() {
+        const email = getUserEmail();
+        if (!email) return [];
+        try { return JSON.parse(localStorage.getItem('eduai_questions_' + email) || '[]'); } catch(e) { return []; }
+    }
+
+    function updateFieldBanners() {
+        const field = getUserField();
+        const qs = getUserQuestions();
+        const hasBoth = field && qs.length > 0;
+        const banner = document.getElementById('active-field-banner');
+        const noBanner = document.getElementById('no-questions-banner');
+        if (banner) banner.style.display = hasBoth ? 'flex' : 'none';
+        if (noBanner) noBanner.style.display = hasBoth ? 'none' : 'flex';
+        if (hasBoth) {
+            const nameEl = document.getElementById('afb-field-name');
+            if (nameEl) nameEl.textContent = field;
+        }
+    }
+
+    function startCustomQuiz() {
+        const qs = getUserQuestions();
+        if (!qs.length) {
+            openFieldModal();
+            return;
+        }
+        window.location.href = 'custom-quiz.html';
+    }
+
+    // ---- Pre-select current field in modal when it opens ----
+    const _origOpenFieldModal = openFieldModal;
+    openFieldModal = function() {
+        _origOpenFieldModal();
+        const currentField = getUserField();
+        if (currentField) {
+            setTimeout(() => {
+                document.querySelectorAll('.sqt-field-btn').forEach(btn => {
+                    if (btn.dataset.field === currentField) {
+                        selectField(btn);
+                    }
+                });
+            }, 50);
+        }
+    };
+
+    // Init banners after dashboard loads
+    const _origInit = initDashboard;
+    initDashboard = function() {
+        _origInit();
+        updateFieldBanners();
+    };
+
     // Init
     initDashboard();
+
+    // ---- Specify Question Type Modal Logic ----
+    let selectedField = '';
+    let isCustomField = false;
+
+    function openFieldModal() {
+        document.getElementById('sqt-overlay').classList.add('active');
+        // reset
+        document.querySelectorAll('.sqt-field-btn').forEach(b => b.classList.remove('selected'));
+        document.getElementById('sqt-custom-wrap').style.display = 'none';
+        document.getElementById('sqt-selected-display').style.display = 'none';
+        document.getElementById('sqt-proceed-btn').disabled = true;
+        document.getElementById('sqt-custom-input').value = '';
+        selectedField = '';
+        isCustomField = false;
+    }
+
+    function closeFieldModal() {
+        document.getElementById('sqt-overlay').classList.remove('active');
+    }
+
+    function closeSqtModal(e) {
+        if (e.target === document.getElementById('sqt-overlay')) closeFieldModal();
+    }
+
+    function selectField(btn) {
+        document.querySelectorAll('.sqt-field-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+
+        if (btn.id === 'sqt-custom-field-btn') {
+            isCustomField = true;
+            document.getElementById('sqt-custom-wrap').style.display = 'block';
+            document.getElementById('sqt-selected-display').style.display = 'none';
+            document.getElementById('sqt-proceed-btn').disabled = true;
+            selectedField = '';
+            document.getElementById('sqt-custom-input').focus();
+            document.getElementById('sqt-custom-input').addEventListener('input', function() {
+                const val = this.value.trim();
+                selectedField = val;
+                if (val.length > 1) {
+                    document.getElementById('sqt-selected-name').textContent = val;
+                    document.getElementById('sqt-selected-display').style.display = 'flex';
+                    document.getElementById('sqt-proceed-btn').disabled = false;
+                } else {
+                    document.getElementById('sqt-selected-display').style.display = 'none';
+                    document.getElementById('sqt-proceed-btn').disabled = true;
+                }
+            });
+        } else {
+            isCustomField = false;
+            document.getElementById('sqt-custom-wrap').style.display = 'none';
+            selectedField = btn.dataset.field;
+            document.getElementById('sqt-selected-name').textContent = selectedField;
+            document.getElementById('sqt-selected-display').style.display = 'flex';
+            document.getElementById('sqt-proceed-btn').disabled = false;
+        }
+    }
+
+    function proceedToFeed() {
+        if (!selectedField) return;
+        sessionStorage.setItem('questionField', selectedField);
+        window.location.href = 'question-feed.html';
+    }
     </script>
 </body>
 </html>

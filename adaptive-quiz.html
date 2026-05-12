@@ -120,15 +120,61 @@
             <div class="aq-ai-tutor" id="aq-ai-tutor" style="display:none">
                 <div class="ai-tutor-header">
                     <div class="ai-tutor-avatar"><i class="fas fa-robot"></i></div>
-                    <div>
-                        <h4>AI Tutor</h4>
+                    <div class="ai-tutor-header-info">
+                        <h4>🤖 المعلم الذكي | AI Tutor</h4>
                         <span class="ai-typing-label" id="ai-typing-label">Thinking...</span>
                     </div>
+                    <div class="ai-result-badge" id="ai-result-badge"></div>
                 </div>
+
+                <!-- Correct Answer Spotlight -->
+                <div class="ai-correct-spotlight" id="ai-correct-spotlight" style="display:none">
+                    <div class="ai-spotlight-label"><i class="fas fa-check-double"></i> الإجابة الصحيحة | Correct Answer</div>
+                    <div class="ai-spotlight-answer" id="ai-spotlight-answer"></div>
+                </div>
+
+                <!-- Typed main explanation -->
                 <div class="ai-tutor-message" id="ai-tutor-message"></div>
-                <div class="ai-step-by-step" id="ai-step-by-step" style="display:none">
-                    <h5><i class="fas fa-list-ol"></i> Step-by-Step Explanation</h5>
-                    <ol class="ai-steps-list" id="ai-steps-list"></ol>
+
+                <!-- Rich Analysis Panel (revealed after typing) -->
+                <div class="ai-analysis-panel" id="ai-analysis-panel" style="display:none">
+
+                    <!-- Step-by-Step Breakdown -->
+                    <div class="ai-analysis-section ais-steps" id="ais-steps" style="display:none">
+                        <div class="ais-header">
+                            <span class="ais-icon"><i class="fas fa-list-ol"></i></span>
+                            <span class="ais-title">خطوات التحليل | Step-by-Step Breakdown</span>
+                        </div>
+                        <ol class="ais-steps-list" id="ai-steps-list"></ol>
+                    </div>
+
+                    <!-- Options Analysis (MCQ) -->
+                    <div class="ai-analysis-section ais-wrong-opts" id="ais-wrong-opts" style="display:none">
+                        <div class="ais-header">
+                            <span class="ais-icon"><i class="fas fa-list-check"></i></span>
+                            <span class="ais-title">تحليل كل الخيارات | Full Options Analysis</span>
+                        </div>
+                        <div class="ais-body" id="ais-wrong-opts-body"></div>
+                    </div>
+
+                    <!-- Key Takeaway -->
+                    <div class="ai-analysis-section ais-takeaway" id="ais-takeaway" style="display:none">
+                        <div class="ais-header">
+                            <span class="ais-icon"><i class="fas fa-lightbulb"></i></span>
+                            <span class="ais-title">النقطة الأساسية | Key Takeaway</span>
+                        </div>
+                        <div class="ais-body" id="ais-takeaway-body"></div>
+                    </div>
+
+                    <!-- Real-World Application -->
+                    <div class="ai-analysis-section ais-realworld" id="ais-realworld" style="display:none">
+                        <div class="ais-header">
+                            <span class="ais-icon"><i class="fas fa-globe-americas"></i></span>
+                            <span class="ais-title">التطبيق الواقعي | Real-World Application</span>
+                        </div>
+                        <div class="ais-body" id="ais-realworld-body"></div>
+                    </div>
+
                 </div>
             </div>
 
@@ -699,44 +745,126 @@
         const tutor = document.getElementById('aq-ai-tutor');
         const msg = document.getElementById('ai-tutor-message');
         const typingLabel = document.getElementById('ai-typing-label');
-        const stepsContainer = document.getElementById('ai-step-by-step');
-        const stepsList = document.getElementById('ai-steps-list');
-        const stepTitle = stepsContainer.querySelector('h5');
+        const badge = document.getElementById('ai-result-badge');
+        const spotlight = document.getElementById('ai-correct-spotlight');
+        const spotlightAns = document.getElementById('ai-spotlight-answer');
+        const panel = document.getElementById('ai-analysis-panel');
 
+        // Reset all sections
         tutor.style.display = 'block';
-        typingLabel.textContent = '🤖 المعلم الذكي يفكر... | AI Tutor is thinking...';
         msg.textContent = '';
-        stepsContainer.style.display = 'none';
-        if (stepTitle) stepTitle.innerHTML = '<i class="fas fa-list-ol"></i> خطوات التفسير | Step-by-Step Explanation';
+        if (panel) panel.style.display = 'none';
+        ['ais-steps','ais-wrong-opts','ais-takeaway','ais-realworld'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.style.display = 'none';
+        });
 
+        // Result badge
+        if (badge) {
+            badge.className = 'ai-result-badge ' + (isCorrect ? 'badge-correct' : 'badge-wrong');
+            badge.textContent = isCorrect ? '✅ إجابة صحيحة!' : '📌 راجع الإجابة';
+        }
+
+        // Correct answer spotlight
+        if (q.options && q.correctAnswer !== undefined && spotlight && spotlightAns) {
+            spotlightAns.innerHTML = '<span style="color:#22c55e;margin-left:6px;">✓</span> ' + q.options[q.correctAnswer];
+            spotlight.style.display = 'block';
+        }
+
+        typingLabel.textContent = '⌨️ يكتب الشرح... | Explaining...';
         const explanation = getExplanation(q, qIndex);
-
-        const prefix = isCorrect
-            ? '✅ إجابة صحيحة! | Correct! '
-            : '📌 تفسير الإجابة الصحيحة | Explanation: ';
-
+        const prefix = isCorrect ? '✅ ' : '📖 ';
         const fullMsg = prefix + explanation.message;
-
         let i = 0;
-        typingLabel.textContent = '⌨️ يكتب... | Typing...';
 
         const typeInterval = setInterval(() => {
-            msg.textContent += fullMsg[i];
-            i++;
+            msg.textContent += fullMsg[i++];
             if (i >= fullMsg.length) {
                 clearInterval(typeInterval);
                 typingLabel.textContent = '🤖 المعلم الذكي | AI Tutor';
-
-                if (explanation.steps) {
-                    stepsContainer.style.display = 'block';
-                    stepsList.innerHTML = explanation.steps.map(s =>
-                        `<li style="margin-bottom:6px;line-height:1.7">${s}</li>`
-                    ).join('');
-                }
+                _revealAnalysisSections(q, explanation);
             }
-        }, 14);
+        }, 12);
 
         tutor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Derive enrichment data from existing explanation if not explicitly set
+    function _getEnrichment(q, explanation) {
+        const topic = q.topic || 'virtual-env';
+        const isCyber = (topic === 'cybersecurity');
+
+        const takeaway = explanation.keyTakeaway ||
+            (explanation.steps && explanation.steps.length
+                ? '🔑 ' + explanation.steps[explanation.steps.length - 1]
+                : '');
+
+        const realWorldMap = {
+            'cybersecurity': '🌍 يُطبَّق هذا المفهوم في كل شركة تقنية كبرى — من Google وMicrosoft إلى البنوك والحكومات. فهمه يُهيّئك لمسار احترافي في أمن المعلومات. | This concept is applied in every major tech company. Mastering it prepares you for a professional career in cybersecurity.',
+            'virtual-env':  '🌍 كل مطوّر بايثون محترف يستخدم البيئات الافتراضية يوميًا في مشاريعه. هي معيار صناعي أساسي في تطوير البرمجيات. | Every professional Python developer uses virtual environments daily — it is a core industry standard.',
+        };
+        const realWorld = explanation.realWorld || realWorldMap[topic] || '';
+        return { takeaway, realWorld };
+    }
+
+    // Staggered reveal of analysis sections after typing ends
+    function _revealAnalysisSections(q, explanation) {
+        const panel = document.getElementById('ai-analysis-panel');
+        if (!panel) return;
+        panel.style.display = 'flex';
+        const enriched = _getEnrichment(q, explanation);
+        let delay = 150;
+
+        // 1. Step-by-step
+        if (explanation.steps && explanation.steps.length) {
+            setTimeout(() => {
+                const el = document.getElementById('ais-steps');
+                const list = document.getElementById('ai-steps-list');
+                if (el && list) {
+                    list.innerHTML = explanation.steps.map((s, idx) =>
+                        '<li><span class="ais-step-num">' + (idx + 1) + '</span>' + s + '</li>'
+                    ).join('');
+                    el.style.display = 'block';
+                }
+            }, delay); delay += 350;
+        }
+
+        // 2. Full options analysis (MCQ only)
+        if (q.options && q.correctAnswer !== undefined) {
+            setTimeout(() => {
+                const el = document.getElementById('ais-wrong-opts');
+                const body = document.getElementById('ais-wrong-opts-body');
+                if (el && body) {
+                    body.innerHTML = q.options.map((opt, i) => {
+                        const isCorr = (i === q.correctAnswer);
+                        const letter = String.fromCharCode(65 + i);
+                        return '<div class="ais-opt-row">'
+                            + '<span class="ais-opt-letter ' + (isCorr ? 'opt-correct' : 'opt-wrong') + '">' + letter + '</span>'
+                            + '<span class="ais-opt-text ' + (isCorr ? 'opt-correct-text' : '') + '">' + opt + '</span>'
+                            + '<span class="ais-opt-status ' + (isCorr ? 'correct-status' : 'wrong-status') + '">' + (isCorr ? '✓ صحيح' : '✗ خطأ') + '</span>'
+                            + '</div>';
+                    }).join('');
+                    el.style.display = 'block';
+                }
+            }, delay); delay += 350;
+        }
+
+        // 3. Key takeaway
+        if (enriched.takeaway) {
+            setTimeout(() => {
+                const el = document.getElementById('ais-takeaway');
+                const body = document.getElementById('ais-takeaway-body');
+                if (el && body) { body.textContent = enriched.takeaway; el.style.display = 'block'; }
+            }, delay); delay += 350;
+        }
+
+        // 4. Real-world application
+        if (enriched.realWorld) {
+            setTimeout(() => {
+                const el = document.getElementById('ais-realworld');
+                const body = document.getElementById('ais-realworld-body');
+                if (el && body) { body.textContent = enriched.realWorld; el.style.display = 'block'; }
+            }, delay);
+        }
     }
 
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -750,43 +878,60 @@
     }
 
     // ─────────────────────────────────────────────
-    // AI Tutor for complex dynamic question types
+    // AI Tutor — Complex question types
     // ─────────────────────────────────────────────
     function showAITutorComplex(correctAnswer, userAnswer, q) {
         const tutor = document.getElementById('aq-ai-tutor');
         const msg = document.getElementById('ai-tutor-message');
         const typingLabel = document.getElementById('ai-typing-label');
-        const stepsContainer = document.getElementById('ai-step-by-step');
-        const stepsList = document.getElementById('ai-steps-list');
-        const stepTitle = stepsContainer.querySelector('h5');       
+        const badge = document.getElementById('ai-result-badge');
+        const spotlight = document.getElementById('ai-correct-spotlight');
+        const spotlightAns = document.getElementById('ai-spotlight-answer');
+        const panel = document.getElementById('ai-analysis-panel');
 
         tutor.style.display = 'block';
-        typingLabel.textContent = '🤖 المعلم الذكي يحلل إجابتك... | AI Tutor is analyzing...';
         msg.textContent = '';
-        stepsContainer.style.display = 'none';
+        if (panel) panel.style.display = 'none';
+        ['ais-steps','ais-wrong-opts','ais-takeaway','ais-realworld'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.style.display = 'none';
+        });
 
-        if (stepTitle) stepTitle.innerHTML = '<i class="fas fa-check-circle"></i> الإجابة النموذجية | Perfect Answer';
+        if (badge) { badge.className = 'ai-result-badge badge-analyzing'; badge.textContent = '🤖 جاري التحليل...'; }
 
-        // Format correct answer nicely if it's an array
-        let perfectAnsText = Array.isArray(correctAnswer) ? '<br>• ' + correctAnswer.join('<br>• ') : correctAnswer;
-        if(q.type === 'coding') perfectAnsText = `<pre style="background:#0d0f1a;padding:10px;border-radius:8px;color:#00ff00;direction:ltr;margin-top:10px;">${correctAnswer}</pre>`;
+        let perfectDisplay = Array.isArray(correctAnswer) ? correctAnswer.join(' ← ') : correctAnswer;
+        if (spotlight && spotlightAns) {
+            spotlightAns.textContent = perfectDisplay;
+            spotlight.style.display = 'block';
+        }
 
-        const mainMsg = `لقد قمت بتحليل تفاصيل استجابتك. بناءً على معايير نظامنا، إليك الإجابة النموذجية المثالية (Perfect Answer) مقارنةً بما قدمته: | I've analyzed your details. based on our criteria, here is the perfect answer:`;
-        
+        typingLabel.textContent = '⌨️ يكتب التحليل... | Analyzing...';
+        const mainMsg = '📊 لقد حللت إجابتك وقارنتها بالإجابة النموذجية. إليك تفصيلاً شاملاً لكل عنصر لتعزيز تعلّمك. | I analyzed your response against the model answer. Here is a complete breakdown for reinforced learning.';
         let i = 0;
-        typingLabel.textContent = '⌨️ يكتب التحليل... | Typing analysis...';
 
         const typeInterval = setInterval(() => {
-            msg.textContent += mainMsg[i];
-            i++;
+            msg.textContent += mainMsg[i++];
             if (i >= mainMsg.length) {
                 clearInterval(typeInterval);
                 typingLabel.textContent = '🤖 المعلم الذكي | AI Tutor';
-
-                stepsContainer.style.display = 'block';
-                stepsList.innerHTML = `<li style="margin-bottom:6px;line-height:1.7;font-weight:bold;color:#22c55e;">${perfectAnsText}</li>`;
+                if (panel) panel.style.display = 'flex';
+                setTimeout(() => {
+                    const stepsEl = document.getElementById('ais-steps');
+                    const stepsList = document.getElementById('ai-steps-list');
+                    if (stepsEl && stepsList) {
+                        let items = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
+                        if (q.type === 'coding') {
+                            stepsList.innerHTML = '<li><pre style="background:#0d0f1a;padding:12px;border-radius:8px;color:#a3e635;direction:ltr;overflow-x:auto;">' + correctAnswer + '</pre></li>';
+                        } else {
+                            stepsList.innerHTML = items.map((s, idx) =>
+                                '<li><span class="ais-step-num">' + (idx+1) + '</span>' + s + '</li>'
+                            ).join('');
+                        }
+                        stepsEl.style.display = 'block';
+                    }
+                }, 200);
+                if (badge) { badge.className = 'ai-result-badge badge-correct'; badge.textContent = '✅ تحليل اكتمل'; }
             }
-        }, 14);
+        }, 12);
 
         tutor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }

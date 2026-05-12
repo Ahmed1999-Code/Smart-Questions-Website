@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed Questions – EduAI Pro</title>
+    <meta name="description" content="Admin question-feeding panel. Add questions for your chosen academic field and launch the exam.">
+    <link rel="stylesheet" href="platform.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh;
+            background: var(--bg, #0d0f1a);
+            font-family: 'Inter', sans-serif;
+            color: var(--text, #e8eaf0);
+        }
+
+        /* ---- Top Nav ---- */
+        .qf-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(13,15,26,0.96); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 0 24px; height: 60px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .qf-nav-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text,#e8eaf0); font-weight: 800; font-size: 1rem; }
+        .qf-nav-icon { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg,#6c63ff,#a855f7); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.85rem; }
+        .qf-field-badge {
+            padding: 4px 12px; border-radius: 20px;
+            background: rgba(108,99,255,0.14); border: 1px solid rgba(108,99,255,0.3);
+            color: #a78bfa; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.4px;
+        }
+        .qf-nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+        .qf-nav-back {
+            padding: 6px 14px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #9ba3c0; background: none; cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; text-decoration: none;
+            transition: all 0.2s;
+        }
+        .qf-nav-back:hover { color: #e8eaf0; background: rgba(255,255,255,0.06); }
+        .qf-q-count-badge {
+            padding: 5px 12px; border-radius: 8px;
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+            color: #10b981; font-size: 0.8rem; font-weight: 700;
+        }
+
+        /* ---- Main Layout ---- */
+        .qf-page { padding-top: 80px; padding-bottom: 120px; max-width: 860px; margin: 0 auto; padding-left: 20px; padding-right: 20px; }
+
+        /* ---- Page Header ---- */
+        .qf-header {
+            text-align: center; margin-bottom: 32px;
+            padding: 36px 24px 30px;
+            background: var(--card,#1a1c2e);
+            border: 1px solid rgba(108,99,255,0.2);
+            border-radius: 20px;
+            position: relative; overflow: hidden;
+        }
+        .qf-header::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg,#6c63ff,#a855f7,#f7931e);
+        }
+        .qf-header-icon {
+            width: 72px; height: 72px; border-radius: 20px; margin: 0 auto 16px;
+            background: linear-gradient(135deg,#6c63ff,#a855f7);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; color: #fff;
+            box-shadow: 0 10px 30px rgba(108,99,255,0.4);
+        }
+        .qf-header h1 {
+            font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 800;
+            color: var(--text,#e8eaf0); margin: 0 0 8px;
+        }
+        .qf-header h1 span { background: linear-gradient(135deg,#6c63ff,#a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .qf-header p { color: #9ba3c0; font-size: 0.93rem; margin: 0; }
+
+        /* ---- Question Card ---- */
+        .qf-questions-list { display: flex; flex-direction: column; gap: 18px; margin-bottom: 24px; }
+        .qf-q-card {
+            background: var(--card,#1a1c2e);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px; padding: 22px 22px 18px;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+        .qf-q-card:hover { border-color: rgba(108,99,255,0.3); }
+        .qf-q-card-header {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+        }
+        .qf-q-num {
+            width: 32px; height: 32px; border-radius: 10px;
+            background: linear-gradient(135deg,#6c63ff,#a855f7);
+            color: #fff; font-size: 0.82rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .qf-q-remove {
+            width: 30px; height: 30px; border-radius: 8px;
+            background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15);
+            color: #ef4444; cursor: pointer; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .qf-q-remove:hover { background: rgba(239,68,68,0.18); transform: scale(1.1); }
+
+        /* Inputs */
+        .qf-label { font-size: 0.78rem; font-weight: 700; color: #9ba3c0; margin-bottom: 6px; display: block; letter-spacing: 0.4px; text-transform: uppercase; }
+        .qf-input, .qf-textarea {
+            width: 100%; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
+            padding: 10px 14px; color: var(--text,#e8eaf0);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            outline: none; transition: border-color 0.2s; resize: vertical;
+        }
+        .qf-input:focus, .qf-textarea:focus { border-color: #6c63ff; background: rgba(108,99,255,0.05); }
+        .qf-textarea { min-height: 64px; }
+        .qf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .qf-options-section { margin-top: 12px; }
+        .qf-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+        .qf-option-wrap { display: flex; align-items: center; gap: 8px; }
+        .qf-option-letter {
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.2);
+            color: #a78bfa; font-size: 0.78rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .qf-correct-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .qf-correct-label { font-size: 0.78rem; font-weight: 700; color: #9ba3c0; }
+        .qf-correct-btns { display: flex; gap: 6px; }
+        .qf-correct-btn {
+            padding: 5px 12px; border-radius: 8px; cursor: pointer;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+            color: #9ba3c0; font-size: 0.8rem; font-weight: 700;
+            transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+        .qf-correct-btn.active {
+            background: rgba(16,185,129,0.14); border-color: #10b981; color: #10b981;
+        }
+
+        /* ---- Add Question Button ---- */
+        .qf-add-btn {
+            width: 100%; padding: 14px; border-radius: 14px;
+            background: rgba(108,99,255,0.08); border: 1.5px dashed rgba(108,99,255,0.35);
+            color: #a78bfa; font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: all 0.25s;
+        }
+        .qf-add-btn:hover { background: rgba(108,99,255,0.16); border-color: #6c63ff; transform: translateY(-2px); }
+
+        /* ---- Sticky Footer with Done button ---- */
+        .qf-footer {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(13,15,26,0.97); backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 14px 24px;
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        }
+        .qf-footer-info { display: flex; flex-direction: column; }
+        .qf-footer-info strong { font-size: 0.95rem; color: var(--text,#e8eaf0); }
+        .qf-footer-info small { font-size: 0.78rem; color: #9ba3c0; }
+        .qf-done-btn {
+            padding: 13px 36px; border-radius: 12px;
+            background: linear-gradient(135deg,#6c63ff,#a855f7);
+            color: #fff; font-size: 1rem; font-weight: 800;
+            border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; gap: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(108,99,255,0.45);
+        }
+        .qf-done-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(108,99,255,0.6); }
+        .qf-done-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* ---- Toast ---- */
+        .qf-toast {
+            position: fixed; top: 76px; right: 20px; z-index: 9999;
+            background: #10b981; color: #fff; padding: 12px 20px;
+            border-radius: 10px; font-size: 0.88rem; font-weight: 700;
+            box-shadow: 0 6px 20px rgba(16,185,129,0.4);
+            transform: translateX(120%); transition: transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .qf-toast.show { transform: translateX(0); }
+        .qf-toast.error { background: #ef4444; box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .qf-row, .qf-options-grid { grid-template-columns: 1fr; }
+            .qf-header h1 { font-size: 1.4rem; }
+            .qf-footer { flex-direction: column; }
+            .qf-done-btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Nav -->
+    <nav class="qf-nav">
+        <a href="dashboard.html" class="qf-nav-brand">
+            <div class="qf-nav-icon"><i class="fas fa-brain"></i></div>
+            EduAI Pro
+        </a>
+        <span class="qf-field-badge" id="nav-field-badge"><i class="fas fa-tag"></i> Loading...</span>
+        <div class="qf-nav-right">
+            <span class="qf-q-count-badge" id="nav-q-count"><i class="fas fa-list-ol"></i> 0 Questions</span>
+            <a href="dashboard.html" class="qf-nav-back"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </nav>
+
+    <!-- Main Page -->
+    <div class="qf-page">
+
+        <!-- Header -->
+        <div class="qf-header">
+            <div class="qf-header-icon"><i class="fas fa-database"></i></div>
+            <h1>Feed Questions for <span id="field-name-title">...</span></h1>
+            <p>Add your exam questions below. Each question needs a text, 4 options, and the correct answer marked. Click <strong>Done</strong> to save these questions to your account and start the exam. Questions will remain active for your account until you specify a new type.</p>
+        </div>
+
+        <!-- Question Cards Container -->
+        <div class="qf-questions-list" id="qf-questions-list">
+            <!-- Cards injected by JS -->
+        </div>
+
+        <!-- Add Question Button -->
+        <button class="qf-add-btn" id="qf-add-btn" onclick="addQuestion()">
+            <i class="fas fa-plus-circle"></i>
+            Add Another Question
+        </button>
+
+    </div>
+
+    <!-- Sticky Footer -->
+    <div class="qf-footer">
+        <div class="qf-footer-info">
+            <strong id="footer-field-name">Field: —</strong>
+            <small id="footer-q-count">0 questions added — add at least 1 to start</small>
+        </div>
+        <button class="qf-done-btn" id="qf-done-btn" onclick="startExam()" disabled>
+            <i class="fas fa-rocket"></i>
+            Done – Start Exam
+        </button>
+    </div>
+
+    <!-- Toast -->
+    <div class="qf-toast" id="qf-toast"><i class="fas fa-check-circle"></i><span id="toast-msg"></span></div>
+
+    <script src="platform.js"></script>
+    <script>
+    // ---- Get current user email ----
+    function getCurrentEmail() {
+        try {
+            const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
+            return (user.email || '').toLowerCase().trim();
+        } catch(e) { return ''; }
+    }
+
+    // ---- State ----
+    const field = sessionStorage.getItem('questionField') || 'General';
+    let questions = []; // array of {question, optionA, optionB, optionC, optionD, correct: 0-3}
+    let cardIdCounter = 0;
+
+    // ---- Init ----
+    document.getElementById('nav-field-badge').innerHTML = `<i class="fas fa-tag"></i> ${field}`;
+    document.getElementById('field-name-title').textContent = field;
+    document.getElementById('footer-field-name').textContent = `Field: ${field}`;
+
+    // Start with 1 empty card
+    addQuestion();
+
+    // ---- Add Question ----
+    function addQuestion() {
+        const id = ++cardIdCounter;
+        const qIndex = questions.length;
+        questions.push({ question: '', optionA: '', optionB: '', optionC: '', optionD: '', correct: -1 });
+
+        const card = document.createElement('div');
+        card.className = 'qf-q-card';
+        card.id = `qcard-${id}`;
+        card.dataset.idx = qIndex;
+        card.innerHTML = `
+            <div class="qf-q-card-header">
+                <div class="qf-q-num" id="qnum-${id}">Q${qIndex + 1}</div>
+                <button class="qf-q-remove" onclick="removeQuestion(${id})" title="Remove question"><i class="fas fa-trash"></i></button>
+            </div>
+
+            <label class="qf-label"><i class="fas fa-question-circle"></i> Question Text</label>
+            <textarea class="qf-textarea" id="qtext-${id}" placeholder="Type the question here..." oninput="updateQ(${id},'question',this.value)"></textarea>
+
+            <div class="qf-options-section">
+                <label class="qf-label"><i class="fas fa-list-ul"></i> Answer Options</label>
+                <div class="qf-options-grid">
+                    ${['A','B','C','D'].map((l,i) => `
+                    <div class="qf-option-wrap">
+                        <div class="qf-option-letter">${l}</div>
+                        <input class="qf-input" id="opt${l}-${id}" placeholder="Option ${l}" oninput="updateQ(${id},'option${l}',this.value)">
+                    </div>`).join('')}
+                </div>
+            </div>
+
+            <div class="qf-correct-row">
+                <span class="qf-correct-label"><i class="fas fa-check-circle"></i> Correct Answer:</span>
+                <div class="qf-correct-btns" id="correct-btns-${id}">
+                    ${['A','B','C','D'].map((l,i) => `
+                    <button class="qf-correct-btn" data-val="${i}" onclick="setCorrect(${id},${i},this)">${l}</button>`).join('')}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('qf-questions-list').appendChild(card);
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        updateCounters();
+    }
+
+    // ---- Remove Question ----
+    function removeQuestion(id) {
+        const card = document.getElementById(`qcard-${id}`);
+        const idx = parseInt(card.dataset.idx);
+        card.style.opacity = '0'; card.style.transform = 'scale(0.9)';
+        card.style.transition = 'all 0.25s'; 
+        setTimeout(() => {
+            card.remove();
+            questions.splice(idx, 1);
+            // re-index remaining cards
+            document.querySelectorAll('.qf-q-card').forEach((c, i) => {
+                c.dataset.idx = i;
+                c.querySelector('.qf-q-num').textContent = `Q${i+1}`;
+            });
+            updateCounters();
+        }, 260);
+    }
+
+    // ---- Update field ----
+    function updateQ(id, field, val) {
+        const card = document.getElementById(`qcard-${id}`);
+        const idx = parseInt(card.dataset.idx);
+        if (questions[idx]) questions[idx][field] = val;
+        updateCounters();
+    }
+
+    // ---- Set Correct ----
+    function setCorrect(id, val, btn) {
+        const card = document.getElementById(`qcard-${id}`);
+        const idx = parseInt(card.dataset.idx);
+        if (questions[idx]) questions[idx].correct = val;
+        // highlight
+        document.querySelectorAll(`#correct-btns-${id} .qf-correct-btn`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateCounters();
+    }
+
+    // ---- Validate & Update Counters ----
+    function updateCounters() {
+        const count = questions.length;
+        document.getElementById('nav-q-count').innerHTML = `<i class="fas fa-list-ol"></i> ${count} Question${count !== 1 ? 's' : ''}`;
+
+        const valid = questions.filter(q =>
+            q.question.trim().length > 2 &&
+            q.optionA.trim() && q.optionB.trim() && q.optionC.trim() && q.optionD.trim() &&
+            q.correct >= 0
+        );
+
+        document.getElementById('footer-q-count').textContent =
+            `${valid.length} / ${count} questions complete${count === 0 ? ' — add at least 1 to start' : ''}`;
+
+        document.getElementById('qf-done-btn').disabled = valid.length === 0;
+    }
+
+    // ---- Show Toast ----
+    function showToast(msg, isError = false) {
+        const t = document.getElementById('qf-toast');
+        document.getElementById('toast-msg').textContent = msg;
+        t.className = 'qf-toast' + (isError ? ' error' : '');
+        setTimeout(() => t.classList.add('show'), 10);
+        setTimeout(() => t.classList.remove('show'), 3200);
+    }
+
+    // ---- Start Exam (Done button) ----
+    function startExam() {
+        // Only keep fully valid questions
+        const valid = questions.filter(q =>
+            q.question.trim().length > 2 &&
+            q.optionA.trim() && q.optionB.trim() && q.optionC.trim() && q.optionD.trim() &&
+            q.correct >= 0
+        );
+
+        if (valid.length === 0) {
+            showToast('Please complete at least 1 question first.', true);
+            return;
+        }
+
+        // Convert to quizQuestions format
+        const formatted = valid.map(q => ({
+            question: q.question.trim(),
+            options: [q.optionA.trim(), q.optionB.trim(), q.optionC.trim(), q.optionD.trim()],
+            correctAnswer: q.correct,
+            topic: field.toLowerCase().replace(/\s+/g, '-'),
+            difficulty: 2,
+            field: field
+        }));
+
+        // ---- Persist permanently per user email in localStorage ----
+        const email = getCurrentEmail();
+        if (email) {
+            localStorage.setItem('eduai_questions_' + email, JSON.stringify(formatted));
+            localStorage.setItem('eduai_field_' + email, field);
+        }
+
+        // Also store in sessionStorage for the current exam session
+        sessionStorage.setItem('customQuestions', JSON.stringify(formatted));
+        sessionStorage.setItem('questionField', field);
+        sessionStorage.setItem('quizMode', 'custom');
+
+        showToast(`Saved & launching exam with ${valid.length} question${valid.length > 1 ? 's' : ''}!`);
+        setTimeout(() => { window.location.href = 'custom-quiz.html'; }, 1000);
+    }
+    </script>
+</body>
+</html>
