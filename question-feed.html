@@ -414,8 +414,8 @@
         sessionStorage.setItem('questionField', field);
         sessionStorage.setItem('quizMode', 'custom');
 
-        showToast(`Saved & launching exam with ${valid.length} question${valid.length > 1 ? 's' : ''}!`);
-        setTimeout(() => { window.location.href = 'custom-quiz.html'; }, 1000);
+        showToast(`Saved ${valid.length} question${valid.length > 1 ? 's' : ''}! Configure presentation settings…`);
+        setTimeout(() => { window.location.href = 'exam-settings.html'; }, 1000);
     }
     </script>
 </body>

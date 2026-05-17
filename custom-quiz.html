@@ -283,6 +283,11 @@
     document.getElementById('cq-field-badge').textContent = field;
     document.getElementById('cq-field-tag').textContent = field;
 
+    // ---- Load exam settings ----
+    const examSettings = JSON.parse(sessionStorage.getItem('examSettings') || '{}');
+    const TIMER_SEC = examSettings.timePerQuestion || 60;
+    const PASS_SCORE = examSettings.passScore || 50;
+
     // ---- State ----
     let currentIdx = 0;
     let answered = false;
@@ -292,7 +297,6 @@
     let startTime = Date.now();
     let qStartTime = Date.now();
     let timerInterval = null;
-    const TIMER_SEC = 60; // 60s per question
     let timeLeft = TIMER_SEC;
 
     // ---- Render Question ----
@@ -426,7 +430,7 @@
         clearInterval(timerInterval);
         const totalTime = Math.round((Date.now() - startTime) / 1000);
         const pct = Math.round((score / customQs.length) * 100);
-        const pass = pct >= 50;
+        const pass = pct >= PASS_SCORE;
 
         document.getElementById('cq-progress-bar').style.width = '100%';
         document.getElementById('cq-quiz-ui').style.display = 'none';
