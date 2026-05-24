@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -38,21 +38,15 @@ body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e
 .cs-step-line{width:40px;height:2px;background:rgba(255,255,255,0.08);margin:0 4px}
 .cs-step-line.done{background:#10b981}
 @media(max-width:600px){.cs-step-label{display:none}.cs-step-line{width:20px}}
-/* â”€â”€ Page body â”€â”€ */
+/* ── Page body ── */
 .cs-page{position:relative;z-index:1;padding:140px 20px 60px;max-width:980px;margin:0 auto}
-/* â”€â”€ Hero â”€â”€ */
+/* ── Hero ── */
 .cs-hero{text-align:center;margin-bottom:40px}
 .cs-hero-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 18px;border-radius:30px;background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.25);color:#a78bfa;font-size:0.8rem;font-weight:700;margin-bottom:18px;letter-spacing:0.4px}
 .cs-hero h1{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;margin-bottom:10px;line-height:1.2}
 .cs-hero h1 span{background:linear-gradient(135deg,#6c63ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .cs-hero p{color:#9ba3c0;font-size:0.97rem;max-width:480px;margin:0 auto}
-/* â”€â”€ Search â”€â”€ */
-.cs-search-wrap{position:relative;max-width:460px;margin:28px auto 36px}
-.cs-search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#6c63ff;font-size:1rem;pointer-events:none}
-.cs-search{width:100%;padding:13px 16px 13px 44px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:#e8eaf0;font-family:'Inter',sans-serif;font-size:0.93rem;outline:none;transition:all 0.2s}
-.cs-search::placeholder{color:#5a6380}
-.cs-search:focus{border-color:#6c63ff;background:rgba(108,99,255,0.07)}
-/* â”€â”€ Grid â”€â”€ */
+/* ── Grid ── */
 .cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 .cs-college-card{padding:24px 20px;border-radius:18px;background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;text-align:center}
 .cs-college-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--col-a),var(--col-b));opacity:0;transition:opacity 0.3s}
@@ -64,7 +58,7 @@ body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e
 .cs-col-name{font-size:0.95rem;font-weight:700;color:#e8eaf0;margin-bottom:4px}
 .cs-col-dept{font-size:0.75rem;color:#9ba3c0;line-height:1.4}
 .cs-no-results{text-align:center;padding:48px;color:#5a6380;font-size:0.93rem}
-/* â”€â”€ Footer bar â”€â”€ */
+/* ── Footer bar ── */
 .cs-footer{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(13,15,26,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.07);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .cs-footer-info strong{display:block;font-size:0.95rem;color:#e8eaf0}
 .cs-footer-info small{font-size:0.78rem;color:#9ba3c0}
@@ -97,14 +91,9 @@ body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e
 
 <div class="cs-page">
   <div class="cs-hero">
-    <div class="cs-hero-badge"><i class="fas fa-university"></i> Step 1 of 4 â€“ College Selection</div>
+    <div class="cs-hero-badge"><i class="fas fa-university"></i> Step 1 of 4 – College Selection</div>
     <h1>Select Your <span>College</span></h1>
     <p>Choose your affiliated college to personalize your learning experience and question bank.</p>
-  </div>
-
-  <div class="cs-search-wrap">
-    <i class="fas fa-search cs-search-icon"></i>
-    <input class="cs-search" id="cs-search" type="text" placeholder="Search colleges..." oninput="filterColleges(this.value)">
   </div>
 
   <div class="cs-grid" id="cs-grid"></div>
@@ -123,18 +112,18 @@ body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e
 <script src="platform.js"></script>
 <script>
 const COLLEGES = [
-  { id:'cs', name:'Computer Science', dept:'Software Engineering آ· AI آ· Networks', icon:'fa-laptop-code', color:['#6c63ff','#a855f7'] },
-  { id:'eng', name:'Engineering', dept:'Civil آ· Mechanical آ· Electrical', icon:'fa-cogs', color:['#f7931e','#fb923c'] },
-  { id:'med', name:'Medicine', dept:'General Medicine آ· Surgery آ· Pharmacy', icon:'fa-heartbeat', color:['#ef4444','#f97316'] },
-  { id:'bus', name:'Business', dept:'Management آ· Marketing آ· Finance', icon:'fa-briefcase', color:['#10b981','#06d6a0'] },
-  { id:'law', name:'Law', dept:'Civil Law آ· Criminal Law آ· International', icon:'fa-balance-scale', color:['#8b5cf6','#7c3aed'] },
-  { id:'sci', name:'Science', dept:'Physics آ· Chemistry آ· Biology آ· Math', icon:'fa-flask', color:['#06b6d4','#0ea5e9'] },
-  { id:'edu', name:'Education', dept:'Teaching آ· Curriculum آ· Psychology', icon:'fa-chalkboard-teacher', color:['#f59e0b','#eab308'] },
-  { id:'arts', name:'Arts & Humanities', dept:'Literature آ· History آ· Philosophy', icon:'fa-palette', color:['#ec4899','#db2777'] },
-  { id:'it', name:'Information Technology', dept:'Cybersecurity آ· Databases آ· Cloud', icon:'fa-server', color:['#14b8a6','#0d9488'] },
-  { id:'eco', name:'Economics', dept:'Macroeconomics آ· Statistics آ· Policy', icon:'fa-chart-bar', color:['#84cc16','#65a30d'] },
-  { id:'arch', name:'Architecture', dept:'Urban Planning آ· Design آ· Structures', icon:'fa-drafting-compass', color:['#f97316','#ea580c'] },
-  { id:'agri', name:'Agriculture', dept:'Agronomy آ· Animal Science آ· Food Tech', icon:'fa-leaf', color:['#22c55e','#16a34a'] },
+  { id:'cs', name:'Computer Science', dept:'Software Engineering · AI · Networks', icon:'fa-laptop-code', color:['#6c63ff','#a855f7'] },
+  { id:'eng', name:'Engineering', dept:'Civil · Mechanical · Electrical', icon:'fa-cogs', color:['#f7931e','#fb923c'] },
+  { id:'med', name:'Medicine', dept:'General Medicine · Surgery · Pharmacy', icon:'fa-heartbeat', color:['#ef4444','#f97316'] },
+  { id:'bus', name:'Business', dept:'Management · Marketing · Finance', icon:'fa-briefcase', color:['#10b981','#06d6a0'] },
+  { id:'law', name:'Law', dept:'Civil Law · Criminal Law · International', icon:'fa-balance-scale', color:['#8b5cf6','#7c3aed'] },
+  { id:'sci', name:'Science', dept:'Physics · Chemistry · Biology · Math', icon:'fa-flask', color:['#06b6d4','#0ea5e9'] },
+  { id:'edu', name:'Education', dept:'Teaching · Curriculum · Psychology', icon:'fa-chalkboard-teacher', color:['#f59e0b','#eab308'] },
+  { id:'arts', name:'Arts & Humanities', dept:'Literature · History · Philosophy', icon:'fa-palette', color:['#ec4899','#db2777'] },
+  { id:'it', name:'Information Technology', dept:'Cybersecurity · Databases · Cloud', icon:'fa-server', color:['#14b8a6','#0d9488'] },
+  { id:'eco', name:'Economics', dept:'Macroeconomics · Statistics · Policy', icon:'fa-chart-bar', color:['#84cc16','#65a30d'] },
+  { id:'arch', name:'Architecture', dept:'Urban Planning · Design · Structures', icon:'fa-drafting-compass', color:['#f97316','#ea580c'] },
+  { id:'agri', name:'Agriculture', dept:'Agronomy · Animal Science · Food Tech', icon:'fa-leaf', color:['#22c55e','#16a34a'] },
 ];
 
 let selected = null;
@@ -153,21 +142,15 @@ if (savedCollege) {
 
 function renderColleges(list) {
   const grid = document.getElementById('cs-grid');
-  if (!list.length) { grid.innerHTML = '<div class="cs-no-results"><i class="fas fa-search" style="font-size:2rem;display:block;margin-bottom:12px"></i>No colleges match your search.</div>'; return; }
-  grid.innerHTML = list.map(c => 
-    <div class="cs-college-card" id="col-" onclick="selectCollege('')" style="--col-a:;--col-b:">
-      <div class="cs-col-icon" style="background:linear-gradient(135deg,,);box-shadow:0 8px 20px 40">
-        <i class="fas "></i>
+  grid.innerHTML = list.map(c => `
+    <div class="cs-college-card${selected === c.id ? ' selected' : ''}" id="col-${c.id}" onclick="selectCollege('${c.id}')" style="--col-a:${c.color[0]};--col-b:${c.color[1]}">
+      <div class="cs-col-icon" style="background:linear-gradient(135deg,${c.color[0]},${c.color[1]});box-shadow:0 8px 20px ${c.color[0]}40">
+        <i class="fas ${c.icon}"></i>
       </div>
-      <div class="cs-col-name"></div>
-      <div class="cs-col-dept"></div>
+      <div class="cs-col-name">${c.name}</div>
+      <div class="cs-col-dept">${c.dept}</div>
     </div>
-  ).join('');
-}
-
-function filterColleges(q) {
-  const lq = q.toLowerCase();
-  renderColleges(q ? COLLEGES.filter(c => c.name.toLowerCase().includes(lq) || c.dept.toLowerCase().includes(lq)) : COLLEGES);
+  `).join('');
 }
 
 function selectCollege(id) {
