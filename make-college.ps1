@@ -1,0 +1,203 @@
+$html = @"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Select Your College – EduAI Pro</title>
+<meta name="description" content="Choose your college to personalise your EduAI Pro learning experience.">
+<link rel="stylesheet" href="platform.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e8eaf0;overflow-x:hidden}
+/* ── Animated background ── */
+.cs-bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.cs-orb{position:absolute;border-radius:50%;filter:blur(80px);animation:orbFloat 8s ease-in-out infinite}
+.cs-orb-1{width:500px;height:500px;background:rgba(108,99,255,0.12);top:-100px;left:-100px;animation-delay:0s}
+.cs-orb-2{width:400px;height:400px;background:rgba(168,85,247,0.1);bottom:-80px;right:-80px;animation-delay:-3s}
+.cs-orb-3{width:300px;height:300px;background:rgba(247,147,30,0.06);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-6s}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.05)}}
+/* ── Nav ── */
+.cs-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(13,15,26,0.92);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.07);height:62px;display:flex;align-items:center;padding:0 28px;gap:14px}
+.cs-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:#e8eaf0;font-weight:800;font-size:1.05rem}
+.cs-brand-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6c63ff,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.9rem}
+.cs-nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.cs-user-chip{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:0.82rem;color:#9ba3c0}
+.cs-logout{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);color:#9ba3c0;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;font-family:'Inter',sans-serif;transition:all 0.2s;text-decoration:none;display:flex;align-items:center;gap:6px}
+.cs-logout:hover{color:#e8eaf0;background:rgba(255,255,255,0.06)}
+/* ── Step Bar ── */
+.cs-steps{position:fixed;top:62px;left:0;right:0;z-index:99;background:rgba(13,15,26,0.9);backdrop-filter:blur(20px);padding:12px 28px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;gap:0}
+.cs-step{display:flex;align-items:center;gap:8px}
+.cs-step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;border:2px solid rgba(255,255,255,0.1);color:#9ba3c0;transition:all 0.3s}
+.cs-step.active .cs-step-dot{background:linear-gradient(135deg,#6c63ff,#a855f7);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(108,99,255,0.5)}
+.cs-step.done .cs-step-dot{background:#10b981;border-color:transparent;color:#fff}
+.cs-step-label{font-size:0.75rem;font-weight:600;color:#9ba3c0;white-space:nowrap}
+.cs-step.active .cs-step-label{color:#a78bfa}
+.cs-step.done .cs-step-label{color:#10b981}
+.cs-step-line{width:40px;height:2px;background:rgba(255,255,255,0.08);margin:0 4px}
+.cs-step-line.done{background:#10b981}
+@media(max-width:600px){.cs-step-label{display:none}.cs-step-line{width:20px}}
+/* ── Page body ── */
+.cs-page{position:relative;z-index:1;padding:140px 20px 60px;max-width:980px;margin:0 auto}
+/* ── Hero ── */
+.cs-hero{text-align:center;margin-bottom:40px}
+.cs-hero-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 18px;border-radius:30px;background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.25);color:#a78bfa;font-size:0.8rem;font-weight:700;margin-bottom:18px;letter-spacing:0.4px}
+.cs-hero h1{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;margin-bottom:10px;line-height:1.2}
+.cs-hero h1 span{background:linear-gradient(135deg,#6c63ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.cs-hero p{color:#9ba3c0;font-size:0.97rem;max-width:480px;margin:0 auto}
+/* ── Search ── */
+.cs-search-wrap{position:relative;max-width:460px;margin:28px auto 36px}
+.cs-search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#6c63ff;font-size:1rem;pointer-events:none}
+.cs-search{width:100%;padding:13px 16px 13px 44px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:#e8eaf0;font-family:'Inter',sans-serif;font-size:0.93rem;outline:none;transition:all 0.2s}
+.cs-search::placeholder{color:#5a6380}
+.cs-search:focus{border-color:#6c63ff;background:rgba(108,99,255,0.07)}
+/* ── Grid ── */
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.cs-college-card{padding:24px 20px;border-radius:18px;background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;text-align:center}
+.cs-college-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--col-a),var(--col-b));opacity:0;transition:opacity 0.3s}
+.cs-college-card:hover{transform:translateY(-4px);border-color:rgba(108,99,255,0.35);box-shadow:0 12px 36px rgba(0,0,0,0.3)}
+.cs-college-card:hover::before{opacity:0.06}
+.cs-college-card.selected{border-color:#6c63ff;background:rgba(108,99,255,0.1);box-shadow:0 0 0 3px rgba(108,99,255,0.2)}
+.cs-college-card.selected::after{content:'\f058';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;top:12px;right:14px;color:#6c63ff;font-size:1.1rem}
+.cs-col-icon{width:56px;height:56px;border-radius:16px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#fff}
+.cs-col-name{font-size:0.95rem;font-weight:700;color:#e8eaf0;margin-bottom:4px}
+.cs-col-dept{font-size:0.75rem;color:#9ba3c0;line-height:1.4}
+.cs-no-results{text-align:center;padding:48px;color:#5a6380;font-size:0.93rem}
+/* ── Footer bar ── */
+.cs-footer{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(13,15,26,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.07);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.cs-footer-info strong{display:block;font-size:0.95rem;color:#e8eaf0}
+.cs-footer-info small{font-size:0.78rem;color:#9ba3c0}
+.cs-next-btn{padding:13px 38px;border-radius:12px;background:linear-gradient(135deg,#6c63ff,#a855f7);color:#fff;font-size:1rem;font-weight:800;border:none;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:10px;transition:all 0.2s;box-shadow:0 4px 20px rgba(108,99,255,0.4)}
+.cs-next-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(108,99,255,0.6)}
+.cs-next-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;box-shadow:none}
+@media(max-width:600px){.cs-hero h1{font-size:1.6rem}.cs-grid{grid-template-columns:1fr 1fr}.cs-footer{flex-direction:column}.cs-next-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="cs-bg"><div class="cs-orb cs-orb-1"></div><div class="cs-orb cs-orb-2"></div><div class="cs-orb cs-orb-3"></div></div>
+
+<nav class="cs-nav">
+  <a href="dashboard.html" class="cs-brand"><div class="cs-brand-icon"><i class="fas fa-brain"></i></div>EduAI Pro</a>
+  <div class="cs-nav-right">
+    <div class="cs-user-chip"><i class="fas fa-user-circle"></i><span id="nav-username">Student</span></div>
+    <a href="auth.html" class="cs-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </div>
+</nav>
+
+<div class="cs-steps">
+  <div class="cs-step active" id="step1"><div class="cs-step-dot">1</div><span class="cs-step-label">College</span></div>
+  <div class="cs-step-line" id="line1"></div>
+  <div class="cs-step" id="step2"><div class="cs-step-dot">2</div><span class="cs-step-label">Questions</span></div>
+  <div class="cs-step-line" id="line2"></div>
+  <div class="cs-step" id="step3"><div class="cs-step-dot">3</div><span class="cs-step-label">Format</span></div>
+  <div class="cs-step-line" id="line3"></div>
+  <div class="cs-step" id="step4"><div class="cs-step-dot">4</div><span class="cs-step-label">Exam</span></div>
+</div>
+
+<div class="cs-page">
+  <div class="cs-hero">
+    <div class="cs-hero-badge"><i class="fas fa-university"></i> Step 1 of 4 – College Selection</div>
+    <h1>Select Your <span>College</span></h1>
+    <p>Choose your affiliated college to personalize your learning experience and question bank.</p>
+  </div>
+
+  <div class="cs-search-wrap">
+    <i class="fas fa-search cs-search-icon"></i>
+    <input class="cs-search" id="cs-search" type="text" placeholder="Search colleges..." oninput="filterColleges(this.value)">
+  </div>
+
+  <div class="cs-grid" id="cs-grid"></div>
+</div>
+
+<div class="cs-footer">
+  <div class="cs-footer-info">
+    <strong id="footer-selected">No college selected</strong>
+    <small>Select a college to continue to the next step</small>
+  </div>
+  <button class="cs-next-btn" id="cs-next-btn" disabled onclick="goNext()">
+    <i class="fas fa-arrow-right"></i> Continue
+  </button>
+</div>
+
+<script src="platform.js"></script>
+<script>
+const COLLEGES = [
+  { id:'cs', name:'Computer Science', dept:'Software Engineering · AI · Networks', icon:'fa-laptop-code', color:['#6c63ff','#a855f7'] },
+  { id:'eng', name:'Engineering', dept:'Civil · Mechanical · Electrical', icon:'fa-cogs', color:['#f7931e','#fb923c'] },
+  { id:'med', name:'Medicine', dept:'General Medicine · Surgery · Pharmacy', icon:'fa-heartbeat', color:['#ef4444','#f97316'] },
+  { id:'bus', name:'Business', dept:'Management · Marketing · Finance', icon:'fa-briefcase', color:['#10b981','#06d6a0'] },
+  { id:'law', name:'Law', dept:'Civil Law · Criminal Law · International', icon:'fa-balance-scale', color:['#8b5cf6','#7c3aed'] },
+  { id:'sci', name:'Science', dept:'Physics · Chemistry · Biology · Math', icon:'fa-flask', color:['#06b6d4','#0ea5e9'] },
+  { id:'edu', name:'Education', dept:'Teaching · Curriculum · Psychology', icon:'fa-chalkboard-teacher', color:['#f59e0b','#eab308'] },
+  { id:'arts', name:'Arts & Humanities', dept:'Literature · History · Philosophy', icon:'fa-palette', color:['#ec4899','#db2777'] },
+  { id:'it', name:'Information Technology', dept:'Cybersecurity · Databases · Cloud', icon:'fa-server', color:['#14b8a6','#0d9488'] },
+  { id:'eco', name:'Economics', dept:'Macroeconomics · Statistics · Policy', icon:'fa-chart-bar', color:['#84cc16','#65a30d'] },
+  { id:'arch', name:'Architecture', dept:'Urban Planning · Design · Structures', icon:'fa-drafting-compass', color:['#f97316','#ea580c'] },
+  { id:'agri', name:'Agriculture', dept:'Agronomy · Animal Science · Food Tech', icon:'fa-leaf', color:['#22c55e','#16a34a'] },
+];
+
+let selected = null;
+
+// Load user
+const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
+if (!user.email) { window.location.href = 'auth.html'; }
+document.getElementById('nav-username').textContent = user.name || user.email || 'Student';
+
+// Pre-select if already saved
+const savedCollege = localStorage.getItem('eduai_college_' + (user.email || '').toLowerCase());
+if (savedCollege) {
+  selected = savedCollege;
+  updateFooter();
+}
+
+function renderColleges(list) {
+  const grid = document.getElementById('cs-grid');
+  if (!list.length) { grid.innerHTML = '<div class="cs-no-results"><i class="fas fa-search" style="font-size:2rem;display:block;margin-bottom:12px"></i>No colleges match your search.</div>'; return; }
+  grid.innerHTML = list.map(c => `
+    <div class="cs-college-card${selected === c.id ? ' selected' : ''}" id="col-${c.id}" onclick="selectCollege('${c.id}')" style="--col-a:${c.color[0]};--col-b:${c.color[1]}">
+      <div class="cs-col-icon" style="background:linear-gradient(135deg,${c.color[0]},${c.color[1]});box-shadow:0 8px 20px ${c.color[0]}40">
+        <i class="fas ${c.icon}"></i>
+      </div>
+      <div class="cs-col-name">${c.name}</div>
+      <div class="cs-col-dept">${c.dept}</div>
+    </div>
+  `).join('');
+}
+
+function filterColleges(q) {
+  const lq = q.toLowerCase();
+  renderColleges(q ? COLLEGES.filter(c => c.name.toLowerCase().includes(lq) || c.dept.toLowerCase().includes(lq)) : COLLEGES);
+}
+
+function selectCollege(id) {
+  selected = id;
+  document.querySelectorAll('.cs-college-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('col-' + id);
+  if (card) { card.classList.add('selected'); }
+  updateFooter();
+}
+
+function updateFooter() {
+  const c = COLLEGES.find(x => x.id === selected);
+  document.getElementById('footer-selected').textContent = c ? c.name + ' selected' : 'No college selected';
+  document.getElementById('cs-next-btn').disabled = !selected;
+}
+
+function goNext() {
+  if (!selected) return;
+  const email = (user.email || '').toLowerCase();
+  localStorage.setItem('eduai_college_' + email, selected);
+  const c = COLLEGES.find(x => x.id === selected);
+  sessionStorage.setItem('selectedCollege', JSON.stringify(c));
+  window.location.href = 'question-count.html';
+}
+
+renderColleges(COLLEGES);
+</script>
+</body>
+</html>
+"@
+Set-Content -Path "college-select.html" -Value $html -Encoding UTF8
+Write-Host "Done: college-select.html"

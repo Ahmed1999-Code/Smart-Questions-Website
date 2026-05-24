@@ -305,7 +305,10 @@
             localStorage.setItem('eduai_current_user', JSON.stringify(user));
             showBtnLoader('login-btn');
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
+                // Go to college-select if not yet chosen, else dashboard
+                const email = (user.email || '').toLowerCase();
+                const hasCollege = localStorage.getItem('eduai_college_' + email);
+                window.location.href = hasCollege ? 'dashboard.html' : 'college-select.html';
             }, 800);
         }
 
@@ -355,9 +358,9 @@
             localStorage.setItem('eduai_current_user', JSON.stringify(newUser));
 
             showBtnLoader('signup-btn');
-            successEl.textContent = '🎉 Account created! Redirecting to your dashboard...';
+            successEl.textContent = '🎉 Account created! Let\'s set up your profile...';
             successEl.style.display = 'flex';
-            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+            setTimeout(() => { window.location.href = 'college-select.html'; }, 1200);
         }
 
         function showBtnLoader(btnId) {
