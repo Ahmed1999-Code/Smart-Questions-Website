@@ -1117,9 +1117,12 @@
     }
 
     function startCustomQuiz() {
-        // Send the user to the new exam setup flow (Question Count -> Format Mode -> Quiz)
-        // question-count.html will automatically enforce college selection if missing.
-        window.location.href = 'question-count.html';
+        const qs = getUserQuestions();
+        if (!qs.length) {
+            openFieldModal();
+            return;
+        }
+        window.location.href = 'custom-quiz.html';
     }
 
     // ---- Pre-select current field in modal when it opens ----
