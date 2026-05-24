@@ -46,6 +46,12 @@ body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e
 .cs-hero h1{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;margin-bottom:10px;line-height:1.2}
 .cs-hero h1 span{background:linear-gradient(135deg,#6c63ff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .cs-hero p{color:#9ba3c0;font-size:0.97rem;max-width:480px;margin:0 auto}
+/* ── Search ── */
+.cs-search-wrap{position:relative;max-width:460px;margin:28px auto 36px}
+.cs-search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#6c63ff;font-size:1rem;pointer-events:none}
+.cs-search{width:100%;padding:13px 16px 13px 44px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:#e8eaf0;font-family:'Inter',sans-serif;font-size:0.93rem;outline:none;transition:all 0.2s}
+.cs-search::placeholder{color:#5a6380}
+.cs-search:focus{border-color:#6c63ff;background:rgba(108,99,255,0.07)}
 /* ── Grid ── */
 .cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 .cs-college-card{padding:24px 20px;border-radius:18px;background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;text-align:center}
@@ -96,6 +102,11 @@ body{min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif;color:#e
     <p>Choose your affiliated college to personalize your learning experience and question bank.</p>
   </div>
 
+  <div class="cs-search-wrap">
+    <i class="fas fa-search cs-search-icon"></i>
+    <input class="cs-search" id="cs-search" type="text" placeholder="Search colleges..." oninput="filterColleges(this.value)">
+  </div>
+
   <div class="cs-grid" id="cs-grid"></div>
 </div>
 
@@ -142,6 +153,7 @@ if (savedCollege) {
 
 function renderColleges(list) {
   const grid = document.getElementById('cs-grid');
+  if (!list.length) { grid.innerHTML = '<div class="cs-no-results"><i class="fas fa-search" style="font-size:2rem;display:block;margin-bottom:12px"></i>No colleges match your search.</div>'; return; }
   grid.innerHTML = list.map(c => `
     <div class="cs-college-card${selected === c.id ? ' selected' : ''}" id="col-${c.id}" onclick="selectCollege('${c.id}')" style="--col-a:${c.color[0]};--col-b:${c.color[1]}">
       <div class="cs-col-icon" style="background:linear-gradient(135deg,${c.color[0]},${c.color[1]});box-shadow:0 8px 20px ${c.color[0]}40">
@@ -151,6 +163,11 @@ function renderColleges(list) {
       <div class="cs-col-dept">${c.dept}</div>
     </div>
   `).join('');
+}
+
+function filterColleges(q) {
+  const lq = q.toLowerCase();
+  renderColleges(q ? COLLEGES.filter(c => c.name.toLowerCase().includes(lq) || c.dept.toLowerCase().includes(lq)) : COLLEGES);
 }
 
 function selectCollege(id) {
