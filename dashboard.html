@@ -8,6 +8,36 @@
     <link rel="stylesheet" href="platform.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* AI Tutor CSS */
+        .tutor-wrap { display: flex; flex-direction: column; height: 100%; min-height: 600px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 18px; overflow: hidden; }
+        .tutor-header { padding: 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 14px; }
+        .tutor-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #6c63ff, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #fff; box-shadow: 0 4px 15px rgba(108,99,255,0.3); }
+        .tutor-title h3 { margin: 0; font-size: 1.1rem; color: #e8eaf0; }
+        .tutor-title p { margin: 4px 0 0; font-size: 0.8rem; color: #10b981; display: flex; align-items: center; gap: 5px; }
+        .tutor-title p i { font-size: 0.5rem; }
+        .tutor-chat { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+        .tutor-msg { display: flex; gap: 14px; max-width: 85%; }
+        .tutor-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+        .tutor-msg-avatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: #fff; flex-shrink: 0; }
+        .tutor-msg.bot .tutor-msg-avatar { background: linear-gradient(135deg, #6c63ff, #a855f7); }
+        .tutor-bubble { padding: 14px 18px; border-radius: 16px; font-size: 0.95rem; line-height: 1.5; color: #e8eaf0; position: relative; }
+        .tutor-msg.bot .tutor-bubble { background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.25); border-top-left-radius: 4px; }
+        .tutor-msg.user .tutor-bubble { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-top-right-radius: 4px; }
+        .tutor-input-area { padding: 20px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 12px; }
+        .tutor-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 18px; color: #e8eaf0; font-family: 'Inter', sans-serif; font-size: 0.95rem; resize: none; outline: none; transition: all 0.2s; height: 52px; overflow-y: hidden; }
+        .tutor-input:focus { border-color: #6c63ff; background: rgba(108,99,255,0.05); }
+        .tutor-send { width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, #6c63ff, #a855f7); border: none; color: #fff; font-size: 1.2rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+        .tutor-send:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(108,99,255,0.4); }
+        .tutor-typing { display: flex; gap: 4px; padding: 6px 0; }
+        .tutor-dot { width: 6px; height: 6px; background: #a78bfa; border-radius: 50%; animation: tutorBounce 1.4s infinite ease-in-out both; }
+        .tutor-dot:nth-child(1) { animation-delay: -0.32s; }
+        .tutor-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes tutorBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .tutor-suggestions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+        .tutor-sug-btn { padding: 6px 14px; border-radius: 20px; background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.3); color: #a78bfa; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .tutor-sug-btn:hover { background: rgba(108,99,255,0.2); color: #fff; }
+    </style>
 </head>
 <body class="dashboard-body">
 
@@ -35,6 +65,9 @@
             </a>
             <a href="#" class="sidebar-link" onclick="showSection('leaderboard')">
                 <i class="fas fa-crown"></i><span>Leaderboard</span>
+            </a>
+            <a href="#" class="sidebar-link" onclick="showSection('tutor')" style="color:#a855f7">
+                <i class="fas fa-robot"></i><span>AI Tutor</span>
             </a>
             <a href="#" class="sidebar-link sidebar-link-special" id="specify-qtype-btn" onclick="openFieldModal()" title="Specify Question Type">
                 <i class="fas fa-sliders-h"></i><span>Specify Question Type</span>
@@ -671,6 +704,37 @@
             </div>
         </section>
 
+        <!-- ============ AI TUTOR SECTION ============ -->
+        <section class="dash-section" id="section-tutor">
+            <div class="tutor-wrap">
+                <div class="tutor-header">
+                    <div class="tutor-avatar"><i class="fas fa-robot"></i></div>
+                    <div class="tutor-title">
+                        <h3>EduAI Interactive Tutor</h3>
+                        <p><i class="fas fa-circle"></i> Online & Ready to help</p>
+                    </div>
+                </div>
+                <div class="tutor-chat" id="tutor-chat">
+                    <div class="tutor-msg bot">
+                        <div class="tutor-msg-avatar"><i class="fas fa-robot"></i></div>
+                        <div class="tutor-bubble">
+                            Hello! I'm your personal EduAI Tutor. I can help you understand complex concepts, explain your quiz mistakes, walk you through coding problems, or review historical events. 
+                            <br><br>What would you like to learn today?
+                            <div class="tutor-suggestions">
+                                <button class="tutor-sug-btn" onclick="sendTutorSug(this)">Explain Quantum Computing</button>
+                                <button class="tutor-sug-btn" onclick="sendTutorSug(this)">Help me with Python loops</button>
+                                <button class="tutor-sug-btn" onclick="sendTutorSug(this)">What caused the Renaissance?</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tutor-input-area">
+                    <textarea class="tutor-input" id="tutor-input" placeholder="Type your question here... (Press Enter to send)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();submitTutor();}"></textarea>
+                    <button class="tutor-send" onclick="submitTutor()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- ========== SPECIFY QUESTION TYPE MODAL ========== -->
@@ -1212,6 +1276,63 @@
         if (!selectedField) return;
         sessionStorage.setItem('questionField', selectedField);
         window.location.href = 'question-feed.html';
+    }
+
+    // ---- AI Tutor Logic ----
+    function sendTutorSug(btn) {
+        document.getElementById('tutor-input').value = btn.textContent;
+        submitTutor();
+    }
+
+    function submitTutor() {
+        const input = document.getElementById('tutor-input');
+        const text = input.value.trim();
+        if(!text) return;
+        
+        input.value = '';
+        appendTutorMsg(text, 'user');
+        
+        // Show typing
+        const chat = document.getElementById('tutor-chat');
+        const typingId = 'typing-' + Date.now();
+        const typingHtml = `
+            <div class="tutor-msg bot" id="${typingId}">
+                <div class="tutor-msg-avatar"><i class="fas fa-robot"></i></div>
+                <div class="tutor-bubble">
+                    <div class="tutor-typing"><div class="tutor-dot"></div><div class="tutor-dot"></div><div class="tutor-dot"></div></div>
+                </div>
+            </div>`;
+        chat.insertAdjacentHTML('beforeend', typingHtml);
+        chat.scrollTop = chat.scrollHeight;
+
+        // Mock AI response delay
+        setTimeout(() => {
+            const typingEl = document.getElementById(typingId);
+            if(typingEl) typingEl.remove();
+            const reply = generateMockAIResponse(text);
+            appendTutorMsg(reply, 'bot');
+        }, 1500 + Math.random() * 1000);
+    }
+
+    function appendTutorMsg(text, sender) {
+        const chat = document.getElementById('tutor-chat');
+        const avatar = sender === 'user' ? (getUserName().charAt(0).toUpperCase() || 'U') : '<i class="fas fa-robot"></i>';
+        const html = `
+            <div class="tutor-msg ${sender}">
+                <div class="tutor-msg-avatar">${avatar}</div>
+                <div class="tutor-bubble">${text.replace(/\n/g, '<br>')}</div>
+            </div>`;
+        chat.insertAdjacentHTML('beforeend', html);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function generateMockAIResponse(q) {
+        const lowerQ = q.toLowerCase();
+        if(lowerQ.includes('quantum')) return "Quantum computing uses the principles of quantum mechanics to process information! Unlike classical bits (0 or 1), quantum bits or **qubits** can exist in multiple states simultaneously (superposition). This allows them to solve complex problems much faster. \n\nWould you like me to break down an example of a quantum algorithm?";
+        if(lowerQ.includes('python') || lowerQ.includes('code') || lowerQ.includes('loop')) return "Great question! In Python, loops are used to repeat a block of code. For example, a `for` loop iterates over a sequence:\n\n```python\nfor i in range(3):\n    print('Hello', i)\n```\n\nThis will print 'Hello' three times. Keep practicing—you'll master loops in no time! Want a quick quiz on this?";
+        if(lowerQ.includes('renaissance')) return "The Renaissance was an incredible period! It started in Italy in the 14th century, driven by a rediscovery of classical Greek and Roman philosophy, literature, and art. The invention of the printing press also helped spread these ideas rapidly. \n\nIf you're interested, we can explore key figures like Leonardo da Vinci or Michelangelo next!";
+        
+        return "That's an excellent question! Thinking critically is the best way to learn. Because I'm your AI tutor, I can analyze any topic you throw at me. \n\nIn a real-world scenario, I would break this down step-by-step to build your strong foundation. Let me know if you want to dive deeper into specific formulas, historical dates, or scientific concepts!";
     }
     </script>
 </body>
