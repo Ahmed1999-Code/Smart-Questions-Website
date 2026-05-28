@@ -211,6 +211,22 @@ document.getElementById('es-field-badge').innerHTML = '<i class="fas fa-tag"></i
 document.getElementById('es-subtitle').textContent = 'Configure how ' + qs.length + ' question' + (qs.length !== 1 ? 's' : '') + ' will be presented to your students.';
 document.getElementById('footer-q-info').textContent = qs.length + ' question' + (qs.length !== 1 ? 's' : '') + ' ready to launch';
 
+// ---- Read formats chosen on question-feed page ----
+var savedFormats = [];
+try { savedFormats = JSON.parse(sessionStorage.getItem('selectedFormats') || '[]'); } catch(e) {}
+if (savedFormats.length > 0) {
+  // If multiple formats chosen, auto-select Mixed; if only one, show Uniform
+  var autoMode = savedFormats.length > 1 ? 'mixed' : 'uniform';
+  selectMode(autoMode);
+  // Show a summary badge under the hero
+  var fmtNames = { mcq: 'MCQ', tf: 'True/False', short: 'Short Answer', code: 'Coding' };
+  var fmtList = savedFormats.map(function(f) { return fmtNames[f] || f; }).join(', ');
+  var infoEl = document.createElement('div');
+  infoEl.style.cssText = 'margin-top:12px;padding:8px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.22);border-radius:8px;font-size:0.8rem;color:#10b981;display:flex;align-items:center;gap:8px;';
+  infoEl.innerHTML = '<i class="fas fa-check-circle"></i> Formats selected in question setup: <strong style="color:#e8eaf0;margin-left:4px">' + fmtList + '</strong>';
+  document.querySelector('.es-hero').appendChild(infoEl);
+}
+
 if (!qs.length) {
   alert('No questions are configured yet. Please ask your administrator to upload questions first.');
   window.location.href = 'question-count.html';

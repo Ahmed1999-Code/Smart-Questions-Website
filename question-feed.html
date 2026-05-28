@@ -186,12 +186,74 @@
         .qf-toast.show { transform: translateX(0); }
         .qf-toast.error { background: #ef4444; box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
 
+        /* ---- Format Selection Block ---- */
+        .qf-format-section {
+            background: #1a1c2e;
+            border: 1px solid rgba(108,99,255,0.25);
+            border-radius: 18px;
+            padding: 26px 24px;
+            margin-bottom: 24px;
+        }
+        .qf-format-title {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.88rem; font-weight: 700; color: #a78bfa;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .qf-format-subtitle {
+            font-size: 0.8rem; color: #9ba3c0; margin-bottom: 18px; line-height: 1.5;
+        }
+        .qf-format-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .qf-format-card {
+            padding: 16px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1.5px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            user-select: none;
+        }
+        .qf-format-card:hover {
+            border-color: rgba(108,99,255,0.4);
+            background: rgba(108,99,255,0.07);
+            transform: translateY(-2px);
+        }
+        .qf-format-card.selected {
+            border-color: #6c63ff;
+            background: rgba(108,99,255,0.13);
+        }
+        .qf-format-card.selected::after {
+            content: '\f058';
+            font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            position: absolute; top: 10px; right: 12px;
+            color: #6c63ff; font-size: 0.95rem;
+        }
+        .qf-format-icon { font-size: 1.5rem; margin-bottom: 8px; }
+        .qf-format-name {
+            font-size: 0.9rem; font-weight: 700; color: #e8eaf0; margin-bottom: 3px;
+        }
+        .qf-format-desc { font-size: 0.72rem; color: #9ba3c0; line-height: 1.4; }
+        .qf-format-note {
+            margin-top: 14px; padding: 10px 14px;
+            background: rgba(108,99,255,0.07);
+            border-radius: 8px; border: 1px dashed rgba(108,99,255,0.2);
+            font-size: 0.78rem; color: #9ba3c0;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .qf-format-note i { color: #a78bfa; }
+
         /* Responsive */
         @media (max-width: 600px) {
             .qf-row, .qf-options-grid { grid-template-columns: 1fr; }
             .qf-header h1 { font-size: 1.4rem; }
             .qf-footer { flex-direction: column; }
             .qf-done-btn { width: 100%; justify-content: center; }
+            .qf-format-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -231,6 +293,38 @@
             Add Another Question
         </button>
 
+        <!-- Question Format Selection -->
+        <div class="qf-format-section" id="qf-format-section">
+            <div class="qf-format-title"><i class="fas fa-layer-group"></i> Question Format</div>
+            <div class="qf-format-subtitle">Select one or more question formats for this exam. Students will encounter the selected type(s) during their session.</div>
+            <div class="qf-format-grid">
+                <div class="qf-format-card selected" id="fmt-mcq" onclick="toggleFormat('mcq', this)">
+                    <div class="qf-format-icon">&#x1F4CB;</div>
+                    <div class="qf-format-name">Multiple Choice (MCQ)</div>
+                    <div class="qf-format-desc">4 options, one correct answer. The standard exam format.</div>
+                </div>
+                <div class="qf-format-card" id="fmt-tf" onclick="toggleFormat('tf', this)">
+                    <div class="qf-format-icon">&#x2705;</div>
+                    <div class="qf-format-name">True / False</div>
+                    <div class="qf-format-desc">Students decide if a statement is true or false.</div>
+                </div>
+                <div class="qf-format-card" id="fmt-short" onclick="toggleFormat('short', this)">
+                    <div class="qf-format-icon">&#x270F;&#xFE0F;</div>
+                    <div class="qf-format-name">Short Answer</div>
+                    <div class="qf-format-desc">Students type a brief written response to the question.</div>
+                </div>
+                <div class="qf-format-card" id="fmt-code" onclick="toggleFormat('code', this)">
+                    <div class="qf-format-icon">&#x1F4BB;</div>
+                    <div class="qf-format-name">Coding / Practical</div>
+                    <div class="qf-format-desc">Problem-solving or code-based questions for technical fields.</div>
+                </div>
+            </div>
+            <div class="qf-format-note">
+                <i class="fas fa-info-circle"></i>
+                <span id="fmt-note-text">1 format selected &mdash; MCQ. You can select multiple formats for a mixed exam.</span>
+            </div>
+        </div>
+
     </div>
 
     <!-- Sticky Footer -->
@@ -262,6 +356,35 @@
     const field = sessionStorage.getItem('questionField') || 'General';
     let questions = []; // array of {question, optionA, optionB, optionC, optionD, correct: 0-3}
     let cardIdCounter = 0;
+    let selectedFormats = new Set(['mcq']); // default: MCQ selected
+
+    // ---- Format Toggle ----
+    function toggleFormat(fmt, card) {
+        if (selectedFormats.has(fmt)) {
+            // Don't allow deselecting the last one
+            if (selectedFormats.size === 1) return;
+            selectedFormats.delete(fmt);
+            card.classList.remove('selected');
+        } else {
+            selectedFormats.add(fmt);
+            card.classList.add('selected');
+        }
+        updateFormatNote();
+    }
+
+    const FORMAT_LABELS = { mcq: 'MCQ', tf: 'True/False', short: 'Short Answer', code: 'Coding' };
+    function updateFormatNote() {
+        const labels = [...selectedFormats].map(f => FORMAT_LABELS[f]);
+        const count = labels.length;
+        const noteEl = document.getElementById('fmt-note-text');
+        if (count === 1) {
+            noteEl.textContent = '1 format selected \u2014 ' + labels[0] + '. You can select multiple formats for a mixed exam.';
+        } else if (count === Object.keys(FORMAT_LABELS).length) {
+            noteEl.textContent = 'All formats selected \u2014 students will experience full variety.';
+        } else {
+            noteEl.textContent = count + ' formats selected \u2014 ' + labels.join(', ') + '.';
+        }
+    }
 
     // ---- Init ----
     document.getElementById('nav-field-badge').innerHTML = `<i class="fas fa-tag"></i> ${field}`;
@@ -413,6 +536,9 @@
         sessionStorage.setItem('customQuestions', JSON.stringify(formatted));
         sessionStorage.setItem('questionField', field);
         sessionStorage.setItem('quizMode', 'custom');
+
+        // Save selected formats
+        sessionStorage.setItem('selectedFormats', JSON.stringify([...selectedFormats]));
 
         showToast(`Saved ${valid.length} question${valid.length > 1 ? 's' : ''}! Configure presentation settings…`);
         setTimeout(() => { window.location.href = 'exam-settings.html'; }, 1000);
