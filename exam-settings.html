@@ -87,17 +87,17 @@ body{margin:0;min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif
     <div class="es-section-title"><i class="fas fa-layer-group"></i> Question Format Mode</div>
     <div class="es-cards">
       <div class="es-card active" id="card-uniform" onclick="selectMode('uniform')">
-        <div class="es-card-icon">ًں“‹</div>
+        <div class="es-card-icon"><i class="fas fa-list-ul" style="font-size:1.5rem;color:#6c63ff"></i></div>
         <div class="es-card-title">Uniform Format</div>
-        <div class="es-card-desc">All questions presented in the same MCQ format â€” consistent for all students.</div>
+        <div class="es-card-desc">All questions presented in the same MCQ format &mdash; consistent for all students.</div>
       </div>
       <div class="es-card" id="card-mixed" onclick="selectMode('mixed')">
-        <div class="es-card-icon">ًںژ²</div>
+        <div class="es-card-icon"><i class="fas fa-th-large" style="font-size:1.5rem;color:#a855f7"></i></div>
         <div class="es-card-title">Mixed Formats</div>
         <div class="es-card-desc">Students experience a variety of question types for a richer exam.</div>
       </div>
       <div class="es-card" id="card-custom" onclick="selectMode('custom')">
-        <div class="es-card-icon">âœ‚ï¸ڈ</div>
+        <div class="es-card-icon"><i class="fas fa-sliders-h" style="font-size:1.5rem;color:#f7931e"></i></div>
         <div class="es-card-title">Custom Split</div>
         <div class="es-card-desc">Specify exactly how many questions of each type to include.</div>
       </div>
@@ -126,12 +126,12 @@ body{margin:0;min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif
     <div class="es-section-title"><i class="fas fa-random"></i> Question Order</div>
     <div class="es-cards">
       <div class="es-card active" id="card-sequential" onclick="selectOrder('sequential')">
-        <div class="es-card-icon">ًں“‘</div>
+        <div class="es-card-icon"><i class="fas fa-sort-numeric-down" style="font-size:1.5rem;color:#10b981"></i></div>
         <div class="es-card-title">Sequential</div>
         <div class="es-card-desc">Questions appear in the original uploaded order.</div>
       </div>
       <div class="es-card" id="card-random" onclick="selectOrder('random')">
-        <div class="es-card-icon">ًں”€</div>
+        <div class="es-card-icon"><i class="fas fa-random" style="font-size:1.5rem;color:#f7931e"></i></div>
         <div class="es-card-title">Randomized</div>
         <div class="es-card-desc">Questions are shuffled randomly for each student session.</div>
       </div>
@@ -162,7 +162,7 @@ body{margin:0;min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif
 <div class="es-footer">
   <div class="es-footer-info">
     <strong id="footer-q-info">Questions ready</strong>
-    <small id="footer-mode-info">Uniform format آ· Sequential آ· 60s per question آ· Pass: 50%</small>
+    <small id="footer-mode-info">Uniform format &middot; Sequential &middot; 60s per question &middot; Pass: 50%</small>
   </div>
   <button class="es-launch-btn" id="launch-btn" onclick="launchExam()">
     <i class="fas fa-rocket"></i> Launch Exam
@@ -274,7 +274,7 @@ function updateFooter() {
   var passVal = document.getElementById('pass-score').value;
   var modeLabel = {uniform:'Uniform format', mixed:'Mixed formats', custom:'Custom split'}[formatMode];
   var orderLabel = questionOrder === 'sequential' ? 'Sequential' : 'Randomized';
-  document.getElementById('footer-mode-info').textContent = modeLabel + ' آ· ' + orderLabel + ' آ· ' + timeVal + 's per question آ· Pass: ' + passVal + '%';
+  document.getElementById('footer-mode-info').textContent = modeLabel + ' · ' + orderLabel + ' · ' + timeVal + 's per question · Pass: ' + passVal + '%';
 }
 
 function launchExam() {
