@@ -322,6 +322,326 @@ window.EduAI = {
 
 
 /* ============================================================
+   RBAC — ROLE-BASED ACCESS CONTROL ENGINE
+   3-Tier hierarchy: admin > teacher > student
+   ============================================================ */
+(function initRBAC() {
+
+    // ── Core helpers ──────────────────────────────────────────
+    function _getUser() {
+        try { return JSON.parse(localStorage.getItem('eduai_current_user') || 'null'); }
+        catch(e) { return null; }
+    }
+
+    function _getRole() {
+        const u = _getUser();
+        if (!u) return null;
+        return (u.role || 'student').toLowerCase();
+    }
+
+    function _isAdmin()   { return _getRole() === 'admin';   }
+    function _isTeacher() { return _getRole() === 'teacher'; }
+    function _isStudent() { return _getRole() === 'student'; }
+
+    // ── Route guard ───────────────────────────────────────────
+    // Call from any restricted page. Redirects and returns false if blocked.
+    function enforceAccess(allowedRoles) {
+        const role = _getRole();
+        if (!role) {
+            window.location.href = 'auth.html';
+            return false;
+        }
+        if (!allowedRoles.includes(role)) {
+            const label = role.charAt(0).toUpperCase() + role.slice(1);
+            showToast(`⛔ Access denied — ${label} accounts cannot access this area.`, 'error', 4000);
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+            return false;
+        }
+        return true;
+    }
+
+    // ── Dashboard sidebar visibility ──────────────────────────
+    // Hides/shows nav items based on role. Called after DOMContentLoaded.
+    function applyDashboardNav() {
+        const role = _getRole();
+        if (!role) return;
+
+        // Items only teachers & admins can see
+        const teacherItems = document.querySelectorAll('.rbac-teacher-only');
+        teacherItems.forEach(el => {
+            el.style.display = (role === 'admin' || role === 'teacher') ? '' : 'none';
+        });
+
+        // Items only admins can see
+        const adminItems = document.querySelectorAll('.rbac-admin-only');
+        adminItems.forEach(el => {
+            el.style.display = role === 'admin' ? '' : 'none';
+        });
+
+        // Stamp a role badge on the sidebar user area
+        const levelEl = document.getElementById('user-level-mini');
+        if (levelEl) {
+            const roleLabels = { admin: '🛡️ Admin', teacher: '📚 Teacher', student: '🎓 Student' };
+            levelEl.textContent = roleLabels[role] || 'Student';
+        }
+    }
+
+    // ── Admin Panel injection ─────────────────────────────────
+    function injectAdminPanel() {
+        if (!_isAdmin()) return;
+        // Only inject if the dashboard main container exists
+        const main = document.getElementById('dashboard-main');
+        if (!main || document.getElementById('section-admin')) return;
+
+        const section = document.createElement('section');
+        section.className = 'dash-section';
+        section.id = 'section-admin';
+        section.innerHTML = `
+        <!-- ============ ADMIN PANEL ============ -->
+        <div class="dash-card" style="margin-bottom:20px;">
+            <div class="dash-card-header">
+                <h3><i class="fas fa-user-shield" style="color:#ef4444"></i> Admin Control Panel</h3>
+                <span class="level-badge" style="background:linear-gradient(135deg,#ef4444,#a855f7);color:#fff;">🛡️ ADMIN ONLY</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:8px;" id="admin-stat-cards">
+                <div class="stat-widget">
+                    <div class="stat-widget-icon" style="background:linear-gradient(135deg,#6c63ff,#a855f7)"><i class="fas fa-users"></i></div>
+                    <div class="stat-widget-data">
+                        <span class="sw-num" id="admin-total-users">0</span>
+                        <span class="sw-label">Registered Users</span>
+                    </div>
+                </div>
+                <div class="stat-widget">
+                    <div class="stat-widget-icon" style="background:linear-gradient(135deg,#f7931e,#f44336)"><i class="fas fa-user-graduate"></i></div>
+                    <div class="stat-widget-data">
+                        <span class="sw-num" id="admin-student-count">0</span>
+                        <span class="sw-label">Students</span>
+                    </div>
+                </div>
+                <div class="stat-widget">
+                    <div class="stat-widget-icon" style="background:linear-gradient(135deg,#11998e,#38ef7d)"><i class="fas fa-chalkboard-teacher"></i></div>
+                    <div class="stat-widget-data">
+                        <span class="sw-num" id="admin-teacher-count">0</span>
+                        <span class="sw-label">Teachers</span>
+                    </div>
+                </div>
+                <div class="stat-widget">
+                    <div class="stat-widget-icon" style="background:linear-gradient(135deg,#ef4444,#a855f7)"><i class="fas fa-user-shield"></i></div>
+                    <div class="stat-widget-data">
+                        <span class="sw-num" id="admin-admin-count">0</span>
+                        <span class="sw-label">Admins</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management Table -->
+        <div class="dash-card" style="margin-bottom:20px;">
+            <div class="dash-card-header">
+                <h3><i class="fas fa-users-cog"></i> User Management</h3>
+                <div style="display:flex;gap:8px;">
+                    <button class="card-action-btn" onclick="window._rbacAdmin.refreshUsers()" style="display:flex;align-items:center;gap:4px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <button class="card-action-btn" onclick="window._rbacAdmin.exportUsers()" style="display:flex;align-items:center;gap:4px;"><i class="fas fa-download"></i> Export</button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;margin-top:8px;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.88rem;" id="admin-users-table">
+                    <thead>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;white-space:nowrap;">#</th>
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;">Name</th>
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;">Email</th>
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;">Role</th>
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;">XP</th>
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;">Joined</th>
+                            <th style="padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="dash-card" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.04);">
+            <div class="dash-card-header">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Danger Zone</h3>
+                <span style="font-size:0.78rem;color:var(--text3);">Irreversible operations — proceed with caution</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;">
+                <button onclick="window._rbacAdmin.wipeQuizData()" style="padding:10px 20px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-family:var(--font-main);font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                    <i class="fas fa-eraser"></i> Wipe All Quiz Data
+                </button>
+                <button onclick="window._rbacAdmin.wipeAllQuestions()" style="padding:10px 20px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-family:var(--font-main);font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                    <i class="fas fa-trash-alt"></i> Wipe All Questions
+                </button>
+                <button onclick="window._rbacAdmin.resetPlatform()" style="padding:10px 20px;border-radius:10px;background:rgba(239,68,68,0.22);border:2px solid rgba(239,68,68,0.6);color:#ef4444;font-family:var(--font-main);font-size:0.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                    <i class="fas fa-bomb"></i> FULL PLATFORM RESET
+                </button>
+            </div>
+        </div>`;
+
+        // Insert before </main>
+        main.appendChild(section);
+        window._rbacAdmin.refreshUsers();
+    }
+
+    // ── Admin operations object ───────────────────────────────
+    window._rbacAdmin = {
+
+        getAllUsers() {
+            try { return JSON.parse(localStorage.getItem('eduai_users') || '[]'); }
+            catch(e) { return []; }
+        },
+
+        refreshUsers() {
+            const users = this.getAllUsers();
+            const students = users.filter(u => (u.role || 'student') === 'student').length;
+            const teachers = users.filter(u => u.role === 'teacher').length;
+            const admins   = users.filter(u => u.role === 'admin').length;
+
+            const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+            setEl('admin-total-users',   users.length);
+            setEl('admin-student-count', students);
+            setEl('admin-teacher-count', teachers);
+            setEl('admin-admin-count',   admins);
+
+            const tbody = document.getElementById('admin-users-tbody');
+            if (!tbody) return;
+
+            const roleBadge = role => {
+                const map = {
+                    admin:   { color:'#a855f7', icon:'fa-user-shield',          label:'Admin'   },
+                    teacher: { color:'#f7931e', icon:'fa-chalkboard-teacher',   label:'Teacher' },
+                    student: { color:'#6c63ff', icon:'fa-user-graduate',        label:'Student' },
+                };
+                const r = map[role] || map.student;
+                return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${r.color}22;border:1px solid ${r.color}44;color:${r.color};font-size:0.75rem;font-weight:700;"><i class="fas ${r.icon}"></i>${r.label}</span>`;
+            };
+
+            tbody.innerHTML = users.length === 0
+                ? `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text3);">No registered users yet.</td></tr>`
+                : users.map((u, i) => `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s;" onmouseover="this.style.background='rgba(108,99,255,0.05)'" onmouseout="this.style.background=''">
+                        <td style="padding:12px 12px;color:var(--text3);">${i + 1}</td>
+                        <td style="padding:12px 12px;font-weight:600;color:var(--text);">${u.name || '—'}</td>
+                        <td style="padding:12px 12px;color:var(--text2);font-size:0.82rem;">${u.email || '—'}</td>
+                        <td style="padding:12px 12px;">${roleBadge(u.role || 'student')}</td>
+                        <td style="padding:12px 12px;color:#a78bfa;font-weight:700;">${(u.xp || 0).toLocaleString()}</td>
+                        <td style="padding:12px 12px;color:var(--text3);font-size:0.78rem;">${u.joinDate ? new Date(u.joinDate).toLocaleDateString() : '—'}</td>
+                        <td style="padding:12px 12px;">
+                            <div style="display:flex;gap:6px;">
+                                <button onclick="window._rbacAdmin.changeRole('${u.email}', '${u.role || 'student'}')"
+                                    title="Change Role"
+                                    style="width:30px;height:30px;border-radius:8px;background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.3);color:#a78bfa;cursor:pointer;font-size:0.8rem;transition:all 0.2s;">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <button onclick="window._rbacAdmin.deleteUser('${u.email}')"
+                                    title="Delete User"
+                                    style="width:30px;height:30px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;cursor:pointer;font-size:0.8rem;transition:all 0.2s;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`).join('');
+        },
+
+        deleteUser(email) {
+            if (!confirm(`⚠️ Permanently delete user: ${email}?\n\nThis action cannot be undone.`)) return;
+            let users = this.getAllUsers().filter(u => u.email !== email);
+            localStorage.setItem('eduai_users', JSON.stringify(users));
+            // Also clear their personal data keys
+            ['eduai_field_', 'eduai_questions_', 'eduai_college_'].forEach(prefix => {
+                localStorage.removeItem(prefix + email.toLowerCase().trim());
+            });
+            showToast(`✅ User ${email} deleted.`, 'success');
+            this.refreshUsers();
+        },
+
+        changeRole(email, currentRole) {
+            const roles = ['student', 'teacher', 'admin'];
+            const next = roles[(roles.indexOf(currentRole) + 1) % roles.length];
+            if (!confirm(`Change ${email}'s role from ${currentRole} → ${next}?`)) return;
+            let users = this.getAllUsers();
+            const u = users.find(u => u.email === email);
+            if (u) {
+                u.role = next;
+                localStorage.setItem('eduai_users', JSON.stringify(users));
+                // Update current session if it's this user
+                const cur = JSON.parse(localStorage.getItem('eduai_current_user') || 'null');
+                if (cur && cur.email === email) {
+                    cur.role = next;
+                    localStorage.setItem('eduai_current_user', JSON.stringify(cur));
+                }
+                showToast(`✅ ${email} is now a ${next}.`, 'success');
+                this.refreshUsers();
+            }
+        },
+
+        exportUsers() {
+            const users = this.getAllUsers();
+            const csv = ['Name,Email,Role,XP,Joined']
+                .concat(users.map(u => `"${u.name||''}","${u.email||''}","${u.role||'student'}","${u.xp||0}","${u.joinDate||''}"`))
+                .join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `eduai_users_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            showToast('📥 Users exported as CSV.', 'success');
+        },
+
+        wipeQuizData() {
+            if (!confirm('⚠️ Wipe ALL quiz results and session data for all users?\n\nThis clears quizResults, examSettings, and customQuestions.')) return;
+            ['quizResults','examSettings','customQuestions','selectedFormats','questionField','quizMode','quizProgress']
+                .forEach(k => sessionStorage.removeItem(k));
+            localStorage.removeItem('latestQuizResults');
+            showToast('🗑️ All quiz data wiped.', 'success');
+        },
+
+        wipeAllQuestions() {
+            if (!confirm('⚠️ Delete ALL stored questions for every user?\n\nThis cannot be undone.')) return;
+            const users = this.getAllUsers();
+            users.forEach(u => {
+                if (u.email) localStorage.removeItem('eduai_questions_' + u.email.toLowerCase().trim());
+            });
+            showToast('🗑️ All question pools cleared.', 'success');
+        },
+
+        resetPlatform() {
+            const first = prompt('⚠️ FULL RESET: Type "RESET" to confirm. This deletes ALL users, data, and settings.');
+            if (first !== 'RESET') { showToast('Reset cancelled.', 'info'); return; }
+            const second = confirm('🚨 FINAL WARNING: This is irreversible. All data will be permanently erased. Continue?');
+            if (!second) { showToast('Reset cancelled.', 'info'); return; }
+            // Clear all eduai_ keys
+            const toRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('eduai_') || key.startsWith('cheat_'))) toRemove.push(key);
+            }
+            toRemove.forEach(k => localStorage.removeItem(k));
+            sessionStorage.clear();
+            showToast('💥 Platform fully reset. Redirecting...', 'warn', 3000);
+            setTimeout(() => { window.location.href = 'auth.html'; }, 2500);
+        }
+    };
+
+    // ── Public API ────────────────────────────────────────────
+    window.EduAI.RBAC = {
+        getUser:          _getUser,
+        getRole:          _getRole,
+        isAdmin:          _isAdmin,
+        isTeacher:        _isTeacher,
+        isStudent:        _isStudent,
+        enforceAccess:    enforceAccess,
+        applyDashboardNav: applyDashboardNav,
+        injectAdminPanel:  injectAdminPanel,
+    };
+
+})();
+
+
+/* ============================================================
    GLOBAL AI TUTOR WIDGET
    Injected on every page via platform.js
    ============================================================ */

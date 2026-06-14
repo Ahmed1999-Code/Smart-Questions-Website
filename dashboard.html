@@ -39,9 +39,13 @@
             <a href="#" class="sidebar-link" onclick="var p=document.getElementById('eduai-tutor-panel');if(p&&!p.classList.contains('tutor-open'))document.getElementById('eduai-tutor-fab').click();" style="color:#a855f7">
                 <i class="fas fa-robot"></i><span>AI Tutor</span>
             </a>
-            <a href="#" class="sidebar-link sidebar-link-special" id="specify-qtype-btn" onclick="openFieldModal()" title="Specify Question Type">
+            <a href="#" class="sidebar-link sidebar-link-special rbac-teacher-only" id="specify-qtype-btn" onclick="openFieldModal()" title="Specify Question Type">
                 <i class="fas fa-sliders-h"></i><span>Specify Question Type</span>
                 <span class="sidebar-link-badge">NEW</span>
+            </a>
+            <a href="#" class="sidebar-link rbac-admin-only" onclick="showSection('admin')" style="color:#ef4444" id="admin-panel-link">
+                <i class="fas fa-user-shield"></i><span>Admin Panel</span>
+                <span class="sidebar-link-badge" style="background:#ef4444">ADMIN</span>
             </a>
             <div class="sidebar-divider"></div>
             <a href="index.html" class="sidebar-link">
@@ -1013,7 +1017,8 @@
             'analytics': ['Analytics', 'Detailed performance breakdown'],
             'learning-path': ['Learning Path', 'Your AI-generated personalized curriculum'],
             'achievements': ['Achievements', 'Your badges and milestones'],
-            'leaderboard': ['Leaderboard', 'See how you rank among learners']
+            'leaderboard': ['Leaderboard', 'See how you rank among learners'],
+            'admin': ['Admin Panel', '🛡️ Full platform control — restricted to administrators']
         };
         const [title, subtitle] = titles[id] || ['Dashboard', ''];
         document.getElementById('page-title').textContent = title;
@@ -1154,6 +1159,21 @@
 
     // Init
     initDashboard();
+
+    // ---- RBAC: apply role-based nav & inject admin panel ----
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.EduAI && window.EduAI.RBAC) {
+            EduAI.RBAC.applyDashboardNav();
+            EduAI.RBAC.injectAdminPanel();
+        }
+    });
+    // Also apply immediately in case DOMContentLoaded already fired
+    if (document.readyState !== 'loading') {
+        if (window.EduAI && window.EduAI.RBAC) {
+            EduAI.RBAC.applyDashboardNav();
+            EduAI.RBAC.injectAdminPanel();
+        }
+    }
 
     // ---- Specify Question Type Modal Logic ----
     let selectedField = '';
