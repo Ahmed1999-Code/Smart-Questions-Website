@@ -110,27 +110,55 @@
                         </button>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-envelope"></i> Email or Username</label>
-                        <input type="text" id="login-email" class="form-input" placeholder="your@email.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
-                        <div class="password-wrap">
-                            <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
-                            <button class="password-eye" type="button" onclick="togglePassword('login-password', this)">
-                                <i class="fas fa-eye"></i>
-                            </button>
+                    <!-- Standard fields: Student & Teacher -->
+                    <div id="login-standard-fields">
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-envelope"></i> Email or Username</label>
+                            <input type="text" id="login-email" class="form-input" placeholder="your@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                            <div class="password-wrap">
+                                <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+                                <button class="password-eye" type="button" onclick="togglePassword('login-password', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-options">
+                            <label class="remember-me">
+                                <input type="checkbox" id="remember-me"> Remember me
+                            </label>
+                            <a href="#" class="forgot-link">Forgot password?</a>
                         </div>
                     </div>
-                    <div class="form-options">
-                        <label class="remember-me">
-                            <input type="checkbox" id="remember-me"> Remember me
-                        </label>
-                        <a href="#" class="forgot-link">Forgot password?</a>
+
+                    <!-- Admin-only credential block -->
+                    <div id="login-admin-fields" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);margin-bottom:16px;">
+                            <i class="fas fa-shield-alt" style="color:#ef4444;font-size:1.1rem;"></i>
+                            <div>
+                                <div style="font-weight:700;color:#ef4444;font-size:0.85rem;letter-spacing:0.05em;">ADMINISTRATOR ACCESS</div>
+                                <div style="color:var(--text3);font-size:0.76rem;margin-top:2px;">Restricted to authorised platform owners only</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-user-shield" style="color:#ef4444"></i> Admin Username</label>
+                            <input type="text" id="admin-username" class="form-input" placeholder="Enter admin username" autocomplete="off" style="border-color:rgba(239,68,68,0.3);">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-key" style="color:#ef4444"></i> Admin Password</label>
+                            <div class="password-wrap">
+                                <input type="password" id="admin-password" class="form-input" placeholder="••••••••" autocomplete="off" style="border-color:rgba(239,68,68,0.3);">
+                                <button class="password-eye" type="button" onclick="togglePassword('admin-password', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
+
                     <button class="btn-auth-submit" id="login-btn" onclick="handleLogin()">
-                        <span><i class="fas fa-sign-in-alt"></i> Sign In</span>
+                        <span id="login-btn-text"><i class="fas fa-sign-in-alt"></i> Sign In</span>
                         <div class="btn-loader" style="display:none"><i class="fas fa-spinner fa-spin"></i></div>
                     </button>
 
@@ -157,9 +185,6 @@
                         </button>
                         <button class="role-btn" id="teacher-role-signup" onclick="selectRole('teacher','signup')">
                             <i class="fas fa-chalkboard-teacher"></i> Teacher
-                        </button>
-                        <button class="role-btn" id="admin-role-signup" onclick="selectRole('admin','signup')" style="border-color:rgba(239,68,68,0.3);">
-                            <i class="fas fa-user-shield" style="color:#ef4444"></i> <span style="color:#ef4444">Admin</span>
                         </button>
                     </div>
 
@@ -232,24 +257,45 @@
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'signup') switchTab('signup');
 
-        // Role selection
+        // Role selection — handles 3 tiers
         let currentRole = { login: 'student', signup: 'student' };
         function selectRole(role, form) {
             currentRole[form] = role;
-            // Deactivate all three role buttons for this form
+
+            // Toggle active state on all buttons for this form
             ['student', 'teacher', 'admin'].forEach(r => {
                 const btn = document.getElementById(`${r}-role-${form}`);
                 if (btn) btn.classList.toggle('active', r === role);
             });
-            // Visual accent for admin button when active
+
+            // Admin button accent
             const adminBtn = document.getElementById(`admin-role-${form}`);
             if (adminBtn) {
+                adminBtn.style.background   = role === 'admin' ? 'rgba(239,68,68,0.15)' : '';
+                adminBtn.style.borderColor  = role === 'admin' ? '#ef4444' : 'rgba(239,68,68,0.3)';
+            }
+
+            // Login form: toggle standard vs admin fields
+            if (form === 'login') {
+                const stdFields   = document.getElementById('login-standard-fields');
+                const adminFields = document.getElementById('login-admin-fields');
+                const btnText     = document.getElementById('login-btn-text');
+
                 if (role === 'admin') {
-                    adminBtn.style.background = 'rgba(239,68,68,0.15)';
-                    adminBtn.style.borderColor = '#ef4444';
+                    stdFields.style.display   = 'none';
+                    adminFields.style.display  = 'block';
+                    if (btnText) btnText.innerHTML = '<i class="fas fa-user-shield"></i> Admin Sign In';
+                    // Clear standard fields for safety
+                    document.getElementById('login-email').value    = '';
+                    document.getElementById('login-password').value = '';
+                    setTimeout(() => document.getElementById('admin-username').focus(), 80);
                 } else {
-                    adminBtn.style.background = '';
-                    adminBtn.style.borderColor = 'rgba(239,68,68,0.3)';
+                    stdFields.style.display   = '';
+                    adminFields.style.display  = 'none';
+                    if (btnText) btnText.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                    // Clear admin fields for safety
+                    document.getElementById('admin-username').value  = '';
+                    document.getElementById('admin-password').value  = '';
                 }
             }
         }
@@ -292,10 +338,68 @@
 
         // Handle Login
         function handleLogin() {
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
             const errEl = document.getElementById('login-error');
             errEl.style.display = 'none';
+
+            // ── ADMIN AUTHENTICATION PATH ────────────────────────────
+            if (currentRole.login === 'admin') {
+                const adminUser = document.getElementById('admin-username').value.trim();
+                const adminPass = document.getElementById('admin-password').value;
+
+                if (!adminUser || !adminPass) {
+                    errEl.textContent = '⛔ Please enter the admin username and password.';
+                    errEl.style.display = 'flex';
+                    return;
+                }
+
+                // Hardcoded owner credentials — immutable
+                const _AU = atob('V2ViTmV4dXM=');                  // WebNexus
+                const _AP = atob('V2ViTmV4dXMjMjAyNiFGb3JnZQ=='); // WebNexus#2026!Forge
+
+                if (adminUser !== _AU || adminPass !== _AP) {
+                    errEl.textContent = '⛔ Invalid admin credentials. Access denied.';
+                    errEl.style.display = 'flex';
+                    // Clear inputs on failure for security
+                    document.getElementById('admin-username').value = '';
+                    document.getElementById('admin-password').value = '';
+                    return;
+                }
+
+                // Build the persistent admin session object
+                const adminObj = {
+                    name:     'WebNexus',
+                    username: 'WebNexus',
+                    email:    'admin@webnexus.local',
+                    role:     'admin',
+                    level:    'expert',
+                    xp:       0,
+                    streak:   0,
+                    badges:   [],
+                    joinDate: new Date().toISOString()
+                };
+
+                // Upsert admin into the users store
+                let users = JSON.parse(localStorage.getItem('eduai_users') || '[]');
+                const existingIdx = users.findIndex(u => u.email === adminObj.email);
+                if (existingIdx >= 0) {
+                    users[existingIdx] = { ...users[existingIdx], role: 'admin' };
+                } else {
+                    users.push(adminObj);
+                }
+                localStorage.setItem('eduai_users', JSON.stringify(users));
+                localStorage.setItem('eduai_current_user', JSON.stringify(adminObj));
+
+                // Update button to show Admin access
+                const btnText = document.getElementById('login-btn-text');
+                if (btnText) btnText.innerHTML = '<i class="fas fa-user-shield"></i> Accessing Admin Panel...';
+                showBtnLoader('login-btn');
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+                return;
+            }
+
+            // ── STUDENT / TEACHER AUTHENTICATION PATH ────────────────
+            const email    = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
 
             if (!email || !password) {
                 errEl.textContent = 'Please fill in all fields.';
@@ -305,28 +409,33 @@
 
             // Check stored users
             let users = JSON.parse(localStorage.getItem('eduai_users') || '[]');
-            // Try to find the user case-insensitively
-            let user = users.find(u => (u.email && u.email.toLowerCase() === email.toLowerCase()) || (u.username && u.username.toLowerCase() === email.toLowerCase()));
+            let user = users.find(u => (u.email && u.email.toLowerCase() === email.toLowerCase()) ||
+                                      (u.username && u.username.toLowerCase() === email.toLowerCase()));
 
             if (!user) {
-                // Feature request: Any email and password opens automatically
-                user = { 
-                    name: 'Student', 
-                    email: email, 
-                    password: password, 
-                    role: currentRole.login || 'student', 
-                    level: 'intermediate', 
-                    xp: 0, streak: 0, badges: [] 
+                user = {
+                    name:     email.split('@')[0] || 'User',
+                    email:    email,
+                    password: password,
+                    role:     currentRole.login || 'student',
+                    level:    'intermediate',
+                    xp: 0, streak: 0, badges: [],
+                    joinDate: new Date().toISOString()
                 };
                 users.push(user);
                 localStorage.setItem('eduai_users', JSON.stringify(users));
             }
 
+            // Prevent student/teacher from stealing admin role
+            if ((user.role || 'student') === 'admin') {
+                errEl.textContent = '⛔ This account requires admin credentials.';
+                errEl.style.display = 'flex';
+                return;
+            }
+
             localStorage.setItem('eduai_current_user', JSON.stringify(user));
             showBtnLoader('login-btn');
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 800);
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
         }
 
         // Handle Signup

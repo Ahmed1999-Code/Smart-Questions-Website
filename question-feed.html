@@ -344,6 +344,15 @@
 
     <script src="platform.js"></script>
     <script>
+    // ── RBAC Route Guard ─────────────────────────────────────────────────────
+    // Only Admin and Teacher roles may access this page.
+    // Students (and unauthenticated visitors) are redirected immediately.
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!window.EduAI || !EduAI.RBAC) return; // safety: platform.js not loaded yet
+        EduAI.RBAC.enforceAccess(['admin', 'teacher']);
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
     // ---- Get current user email ----
     function getCurrentEmail() {
         try {
