@@ -336,6 +336,17 @@
             label.style.color = lvl.color;
         }
 
+        // ── Admin brute-force lockout state ──────────────────────
+        const ADMIN_MAX_ATTEMPTS = 3;
+        const ADMIN_LOCKOUT_MS   = 5 * 60 * 1000; // 5 minutes
+
+        function _getAdminLockout() {
+            try { return JSON.parse(sessionStorage.getItem('_adm_lk') || '{"attempts":0,"lockedUntil":0}'); }
+            catch(e) { return { attempts: 0, lockedUntil: 0 }; }
+        }
+        function _saveAdminLockout(obj) { sessionStorage.setItem('_adm_lk', JSON.stringify(obj)); }
+        function _resetAdminLockout()  { sessionStorage.removeItem('_adm_lk'); }
+
         // Handle Login
         function handleLogin() {
             const errEl = document.getElementById('login-error');
@@ -343,6 +354,20 @@
 
             // ── ADMIN AUTHENTICATION PATH ────────────────────────────
             if (currentRole.login === 'admin') {
+                const lk = _getAdminLockout();
+
+                // ① Lockout check — is the admin panel still locked?
+                if (lk.lockedUntil && Date.now() < lk.lockedUntil) {
+                    const secsLeft = Math.ceil((lk.lockedUntil - Date.now()) / 1000);
+                    const mins = Math.floor(secsLeft / 60);
+                    const secs = secsLeft % 60;
+                    errEl.innerHTML = `🔒 Too many failed attempts. Admin access locked for <strong>${mins}m ${secs}s</strong>.`;
+                    errEl.style.display = 'flex';
+                    document.getElementById('admin-username').value = '';
+                    document.getElementById('admin-password').value = '';
+                    return;
+                }
+
                 const adminUser = document.getElementById('admin-username').value.trim();
                 const adminPass = document.getElementById('admin-password').value;
 
@@ -352,18 +377,34 @@
                     return;
                 }
 
-                // Hardcoded owner credentials — immutable
+                // ② Hardcoded owner credentials — immutable
                 const _AU = atob('V2ViTmV4dXM=');                  // WebNexus
                 const _AP = atob('V2ViTmV4dXMjMjAyNiFGb3JnZQ=='); // WebNexus#2026!Forge
 
                 if (adminUser !== _AU || adminPass !== _AP) {
-                    errEl.textContent = '⛔ Invalid admin credentials. Access denied.';
+                    // Record failed attempt
+                    lk.attempts = (lk.attempts || 0) + 1;
+                    const remaining = ADMIN_MAX_ATTEMPTS - lk.attempts;
+
+                    if (lk.attempts >= ADMIN_MAX_ATTEMPTS) {
+                        lk.lockedUntil = Date.now() + ADMIN_LOCKOUT_MS;
+                        _saveAdminLockout(lk);
+                        errEl.innerHTML = '🔒 <strong>Admin panel locked for 5 minutes</strong> due to too many failed attempts.';
+                    } else {
+                        _saveAdminLockout(lk);
+                        errEl.innerHTML = `⛔ Invalid admin credentials. Access denied. <strong>${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.</strong>`;
+                    }
+
                     errEl.style.display = 'flex';
-                    // Clear inputs on failure for security
+                    // Always wipe both inputs on failure
                     document.getElementById('admin-username').value = '';
                     document.getElementById('admin-password').value = '';
+                    setTimeout(() => document.getElementById('admin-username').focus(), 80);
                     return;
                 }
+
+                // ③ Credentials correct — reset lockout counter
+                _resetAdminLockout();
 
                 // Build the persistent admin session object
                 const adminObj = {
@@ -389,7 +430,6 @@
                 localStorage.setItem('eduai_users', JSON.stringify(users));
                 localStorage.setItem('eduai_current_user', JSON.stringify(adminObj));
 
-                // Update button to show Admin access
                 const btnText = document.getElementById('login-btn-text');
                 if (btnText) btnText.innerHTML = '<i class="fas fa-user-shield"></i> Accessing Admin Panel...';
                 showBtnLoader('login-btn');
@@ -407,12 +447,27 @@
                 return;
             }
 
-            // Check stored users
+            // ④ Block the admin username from ever being used on the student/teacher path
+            const _AU2 = atob('V2ViTmV4dXM='); // WebNexus
+            if (
+                email.toLowerCase() === _AU2.toLowerCase() ||
+                email.toLowerCase() === 'admin@webnexus.local' ||
+                email.toLowerCase() === 'webnexus'
+            ) {
+                errEl.textContent = '⛔ This account requires admin credentials. Please use the Admin login.';
+                errEl.style.display = 'flex';
+                return;
+            }
+
+            // ⑤ Look up registered users — MUST match both email AND password
             let users = JSON.parse(localStorage.getItem('eduai_users') || '[]');
-            let user = users.find(u => (u.email && u.email.toLowerCase() === email.toLowerCase()) ||
-                                      (u.username && u.username.toLowerCase() === email.toLowerCase()));
+            let user = users.find(u =>
+                ((u.email && u.email.toLowerCase() === email.toLowerCase()) ||
+                 (u.username && u.username.toLowerCase() === email.toLowerCase()))
+            );
 
             if (!user) {
+                // New user — auto-register with the credentials they typed
                 user = {
                     name:     email.split('@')[0] || 'User',
                     email:    email,
@@ -424,11 +479,19 @@
                 };
                 users.push(user);
                 localStorage.setItem('eduai_users', JSON.stringify(users));
+            } else {
+                // ⑥ Existing user — validate password
+                if (user.password && user.password !== password) {
+                    errEl.textContent = '⛔ Incorrect password. Please try again.';
+                    errEl.style.display = 'flex';
+                    document.getElementById('login-password').value = '';
+                    return;
+                }
             }
 
-            // Prevent student/teacher from stealing admin role
+            // ⑦ Prevent any stored admin account from being accessed via student path
             if ((user.role || 'student') === 'admin') {
-                errEl.textContent = '⛔ This account requires admin credentials.';
+                errEl.textContent = '⛔ This account requires admin credentials. Please use the Admin login.';
                 errEl.style.display = 'flex';
                 return;
             }
@@ -439,6 +502,7 @@
         }
 
         // Handle Signup
+
         function handleSignup() {
             const firstName = document.getElementById('signup-firstname').value.trim();
             const lastName = document.getElementById('signup-lastname').value.trim();
