@@ -1093,12 +1093,409 @@ ADVANCED CAPABILITIES:
         });
     }
 
+    // ── Courses System ─────────────────────────────────────────
+    const COURSES_DB_KEY = 'eduai_courses_db';
+    const COURSE_PROG_PREFIX = 'eduai_prog_';
+
+    let _coursesCache = [];
+    let _activeCourseId = null;
+    let _activeVidId = null;
+    let _courseEditingId = null; // null = new, string = edit
+    let _vidCounter = 0;
+
+    function _initCoursesDb() {
+        const d = localStorage.getItem(COURSES_DB_KEY);
+        if (d) { _coursesCache = JSON.parse(d); return; }
+        // Default sample courses
+        _coursesCache = [
+            {
+                id: 'c_' + Date.now() + '1',
+                title: 'Advanced JavaScript Mastery',
+                desc: 'Master closures, async/await, and design patterns.',
+                cat: 'Programming', color: '#6c63ff',
+                videos: [
+                    { id: 'v1', title: 'Intro to Closures', url: 'https://www.youtube.com/embed/vKJpN5FAeF4', dur: '10:45' },
+                    { id: 'v2', title: 'Async & Await', url: 'https://www.youtube.com/embed/vn3tm0quoqE', dur: '15:20' }
+                ]
+            },
+            {
+                id: 'c_' + Date.now() + '2',
+                title: 'UI/UX Fundamentals',
+                desc: 'Learn spacing, typography, and color theory.',
+                cat: 'Design', color: '#ec4899',
+                videos: [
+                    { id: 'v3', title: 'Color Theory', url: 'https://www.youtube.com/embed/xYXhB2o-x0k', dur: '08:30' }
+                ]
+            }
+        ];
+        _saveCourses();
+    }
+    function _saveCourses() { localStorage.setItem(COURSES_DB_KEY, JSON.stringify(_coursesCache)); }
+
+    function _getProg(courseId) {
+        const email = EduAI.RBAC.getUser().email;
+        if (!email) return [];
+        const raw = localStorage.getItem(COURSE_PROG_PREFIX + email + '_' + courseId);
+        return raw ? JSON.parse(raw) : [];
+    }
+    function _saveProg(courseId, arr) {
+        const email = EduAI.RBAC.getUser().email;
+        if (email) localStorage.setItem(COURSE_PROG_PREFIX + email + '_' + courseId, JSON.stringify(arr));
+    }
+
+    window.EduAI.Courses = {
+        init: function() {
+            _initCoursesDb();
+            const grid = document.getElementById('courses-grid');
+            if (grid) {
+                this.renderTabs();
+                this.renderGrid('all');
+                
+                // Add event listener for search
+                const search = document.getElementById('course-search-input');
+                if (search) {
+                    search.addEventListener('input', (e) => {
+                        const q = e.target.value.toLowerCase().trim();
+                        const activeCat = document.querySelector('.cft-pill.active')?.dataset.cat || 'all';
+                        this.renderGrid(activeCat, q);
+                    });
+                }
+            }
+
+            // Swatches
+            document.querySelectorAll('.cc-swatch').forEach(sw => {
+                sw.addEventListener('click', () => {
+                    document.querySelectorAll('.cc-swatch').forEach(s => s.classList.remove('picked'));
+                    sw.classList.add('picked');
+                });
+            });
+        },
+
+        renderTabs: function() {
+            const wrap = document.getElementById('courses-filter-tabs');
+            if (!wrap) return;
+            const cats = new Set();
+            _coursesCache.forEach(c => { if(c.cat) cats.add(c.cat); });
+            
+            let html = `<button class="cft-pill active" data-cat="all">All Courses</button>`;
+            cats.forEach(c => { html += `<button class="cft-pill" data-cat="${c}">${c}</button>`; });
+            wrap.innerHTML = html;
+
+            wrap.querySelectorAll('.cft-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    wrap.querySelectorAll('.cft-pill').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const q = document.getElementById('course-search-input')?.value.toLowerCase().trim() || '';
+                    this.renderGrid(btn.dataset.cat, q);
+                });
+            });
+        },
+
+        renderGrid: function(catFilter = 'all', searchQ = '') {
+            const grid = document.getElementById('courses-grid');
+            if (!grid) return;
+
+            let filtered = _coursesCache;
+            if (catFilter !== 'all') {
+                filtered = filtered.filter(c => c.cat === catFilter);
+            }
+            if (searchQ) {
+                filtered = filtered.filter(c => 
+                    c.title.toLowerCase().includes(searchQ) || 
+                    (c.desc && c.desc.toLowerCase().includes(searchQ))
+                );
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="courses-empty">
+                        <div class="courses-empty-icon"><i class="fas fa-search"></i></div>
+                        <h3>No Courses Found</h3>
+                        <p>Try adjusting your search or filter to find what you're looking for.</p>
+                    </div>`;
+                return;
+            }
+
+            const isAdmin = EduAI.RBAC.isAdmin();
+            
+            let html = '';
+            filtered.forEach(c => {
+                const prog = _getProg(c.id);
+                const total = c.videos.length;
+                const completed = prog.length;
+                const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+                
+                let adminHtml = '';
+                if (isAdmin) {
+                    adminHtml = `
+                        <div class="course-admin-btns">
+                            <button class="cab-btn cab-edit" onclick="event.stopPropagation(); EduAI.Courses.openEditModal('${c.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="cab-btn cab-del" onclick="event.stopPropagation(); EduAI.Courses.deleteCourse('${c.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="course-card" onclick="EduAI.Courses.openPlayer('${c.id}')">
+                        <div class="course-thumb" style="background: linear-gradient(135deg, ${c.color}, #1f2937)">
+                            <div class="course-thumb-overlay"></div>
+                            <i class="fas fa-play-circle course-thumb-icon"></i>
+                            <div class="course-vid-badge"><i class="fas fa-film"></i> ${total} Videos</div>
+                            ${adminHtml}
+                        </div>
+                        <div class="course-body">
+                            <div class="course-cat-tag" style="color: ${c.color}; border-color: ${c.color}40; background: ${c.color}15">
+                                <i class="fas fa-tag"></i> ${c.cat}
+                            </div>
+                            <div class="course-title-c">${c.title}</div>
+                            <div class="course-desc-c">${c.desc || 'No description provided.'}</div>
+                            
+                            <div class="course-prog-wrap">
+                                <div class="course-prog-lbl">
+                                    <span>Progress</span><span>${pct}%</span>
+                                </div>
+                                <div class="course-prog-track">
+                                    <div class="course-prog-fill-c" style="width: ${pct}%; background: ${c.color}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        },
+
+        openPlayer: function(id) {
+            const course = _coursesCache.find(c => c.id === id);
+            if (!course) return;
+            _activeCourseId = id;
+            
+            document.getElementById('courses-library-view').style.display = 'none';
+            document.getElementById('courses-player-view').classList.add('visible');
+            
+            document.getElementById('cpv-course-name').textContent = course.title;
+            this.renderPlaylist();
+            
+            if (course.videos.length > 0) {
+                // Find first unwatched or just start first
+                const prog = _getProg(id);
+                let firstUnwatched = course.videos.find(v => !prog.includes(v.id));
+                this.loadVideo((firstUnwatched || course.videos[0]).id);
+            } else {
+                document.getElementById('cpv-iframe-wrap').innerHTML = `<div style="color:#fff; padding:40px; text-align:center;">No videos in this course yet.</div>`;
+                document.getElementById('cpv-video-title').textContent = "Empty Course";
+                document.getElementById('cpv-video-desc').textContent = "Waiting for admin to add content.";
+                document.getElementById('cpv-mark-btn').disabled = true;
+            }
+        },
+
+        closePlayer: function() {
+            _activeCourseId = null;
+            _activeVidId = null;
+            document.getElementById('cpv-iframe-wrap').innerHTML = ''; // stop video
+            document.getElementById('courses-player-view').classList.remove('visible');
+            document.getElementById('courses-library-view').style.display = 'block';
+            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
+        },
+
+        renderPlaylist: function() {
+            if (!_activeCourseId) return;
+            const course = _coursesCache.find(c => c.id === _activeCourseId);
+            const prog = _getProg(_activeCourseId);
+            const total = course.videos.length;
+            const completed = prog.length;
+            const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+            document.getElementById('cpv-prog-count').textContent = `${completed}/${total} Completed`;
+            document.getElementById('cpv-prog-fill').style.width = pct + '%';
+            document.getElementById('cpv-prog-fill').style.background = course.color;
+
+            let html = '';
+            course.videos.forEach((v, idx) => {
+                const isDone = prog.includes(v.id);
+                const isActive = v.id === _activeVidId;
+                let cClass = isActive ? 'active' : '';
+                if (isDone) cClass += ' done';
+                
+                html += `
+                    <div class="cpv-lesson ${cClass}" onclick="EduAI.Courses.loadVideo('${v.id}')">
+                        <div class="cpv-lesson-num">${idx + 1}</div>
+                        <div class="cpv-lesson-info">
+                            <div class="cpv-lesson-name">${v.title}</div>
+                            <div class="cpv-lesson-dur"><i class="far fa-clock"></i> ${v.dur || '10:00'}</div>
+                        </div>
+                        <i class="fas fa-check-circle cpv-check"></i>
+                    </div>
+                `;
+            });
+            document.getElementById('cpv-playlist-body').innerHTML = html;
+        },
+
+        loadVideo: function(vidId) {
+            const course = _coursesCache.find(c => c.id === _activeCourseId);
+            const vid = course.videos.find(v => v.id === vidId);
+            if (!vid) return;
+            _activeVidId = vidId;
+
+            // Generate iframe
+            let iframeUrl = vid.url;
+            if (iframeUrl.includes('youtube.com/watch?v=')) {
+                iframeUrl = iframeUrl.replace('watch?v=', 'embed/');
+            }
+            document.getElementById('cpv-iframe-wrap').innerHTML = `<iframe src="${iframeUrl}" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+            document.getElementById('cpv-video-title').textContent = vid.title;
+            document.getElementById('cpv-video-desc').textContent = "Instructor module for " + vid.title;
+
+            const btn = document.getElementById('cpv-mark-btn');
+            btn.disabled = false;
+            btn.onclick = () => { this.markCompleted(vidId); };
+            
+            const prog = _getProg(_activeCourseId);
+            if (prog.includes(vidId)) {
+                btn.innerHTML = `<i class="fas fa-check"></i> Completed`;
+                btn.style.background = 'var(--bg3)';
+                btn.style.color = 'var(--text3)';
+            } else {
+                btn.innerHTML = `<i class="fas fa-check-circle"></i> Mark as Completed`;
+                btn.style.background = '';
+                btn.style.color = '';
+            }
+
+            this.renderPlaylist();
+        },
+
+        markCompleted: function(vidId) {
+            const prog = _getProg(_activeCourseId);
+            if (!prog.includes(vidId)) {
+                prog.push(vidId);
+                _saveProg(_activeCourseId, prog);
+            }
+            this.loadVideo(vidId); // refresh
+        },
+
+        /* --- Admin --- */
+        openCreateModal: function() {
+            _courseEditingId = null;
+            document.getElementById('cc-modal-title').textContent = "Create New Course";
+            document.getElementById('cc-course-name').value = '';
+            document.getElementById('cc-course-desc').value = '';
+            document.getElementById('cc-course-cat').value = 'Programming';
+            document.querySelectorAll('.cc-swatch')[0].click();
+            document.getElementById('cc-vid-list').innerHTML = '';
+            _vidCounter = 0;
+            this.addVideoRow(); // start with one blank
+            document.getElementById('cc-overlay').classList.add('open');
+        },
+
+        openEditModal: function(id) {
+            const c = _coursesCache.find(x => x.id === id);
+            if (!c) return;
+            _courseEditingId = id;
+            
+            document.getElementById('cc-modal-title').textContent = "Edit Course";
+            document.getElementById('cc-course-name').value = c.title;
+            document.getElementById('cc-course-desc').value = c.desc || '';
+            document.getElementById('cc-course-cat').value = c.cat || 'Programming';
+            
+            let matchedSwatch = false;
+            document.querySelectorAll('.cc-swatch').forEach(sw => {
+                sw.classList.remove('picked');
+                if (sw.dataset.c === c.color) { sw.classList.add('picked'); matchedSwatch = true; }
+            });
+            if (!matchedSwatch) document.querySelectorAll('.cc-swatch')[0].classList.add('picked');
+
+            const list = document.getElementById('cc-vid-list');
+            list.innerHTML = '';
+            _vidCounter = 0;
+            if (c.videos.length === 0) {
+                this.addVideoRow();
+            } else {
+                c.videos.forEach(v => {
+                    this.addVideoRow(v.title, v.url);
+                });
+            }
+
+            document.getElementById('cc-overlay').classList.add('open');
+        },
+
+        closeModal: function() {
+            document.getElementById('cc-overlay').classList.remove('open');
+        },
+
+        addVideoRow: function(title = '', url = '') {
+            _vidCounter++;
+            const id = 'vid_r_' + _vidCounter;
+            const div = document.createElement('div');
+            div.className = 'cc-vid-row';
+            div.id = id;
+            div.innerHTML = `
+                <input type="text" class="cc-vid-inp cv-title" placeholder="Video Title" value="${title}">
+                <input type="text" class="cc-vid-inp cv-url" placeholder="YouTube URL or embed link" value="${url}">
+                <button class="cc-vid-del" onclick="document.getElementById('${id}').remove()" title="Remove Video"><i class="fas fa-trash"></i></button>
+            `;
+            document.getElementById('cc-vid-list').appendChild(div);
+        },
+
+        saveCourse: function() {
+            const title = document.getElementById('cc-course-name').value.trim();
+            if (!title) return alert("Course name is required.");
+            const desc = document.getElementById('cc-course-desc').value.trim();
+            const cat = document.getElementById('cc-course-cat').value;
+            const color = document.querySelector('.cc-swatch.picked')?.dataset.c || '#6c63ff';
+
+            const videos = [];
+            document.querySelectorAll('.cc-vid-row').forEach((row, i) => {
+                const vt = row.querySelector('.cv-title').value.trim();
+                const vu = row.querySelector('.cv-url').value.trim();
+                if (vt || vu) {
+                    videos.push({
+                        id: 'v_' + Date.now() + '_' + i,
+                        title: vt || 'Untitled Video',
+                        url: vu || '',
+                        dur: '10:00' // mock duration
+                    });
+                }
+            });
+
+            if (_courseEditingId) {
+                const c = _coursesCache.find(x => x.id === _courseEditingId);
+                if (c) {
+                    c.title = title; c.desc = desc; c.cat = cat; c.color = color; c.videos = videos;
+                }
+            } else {
+                _coursesCache.unshift({
+                    id: 'c_' + Date.now(),
+                    title: title, desc: desc, cat: cat, color: color, videos: videos
+                });
+            }
+
+            _saveCourses();
+            this.closeModal();
+            this.renderTabs();
+            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
+        },
+
+        deleteCourse: function(id) {
+            if (!confirm('Are you sure you want to delete this course?')) return;
+            _coursesCache = _coursesCache.filter(c => c.id !== id);
+            _saveCourses();
+            this.renderTabs();
+            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
+        }
+    };
+
+
     // ── Init on DOMContentLoaded ──────────────────────────────
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', _inject);
     } else {
         _inject();
     }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.EduAI && window.EduAI.Courses) EduAI.Courses.init();
+    });
 
 })();
+
 
