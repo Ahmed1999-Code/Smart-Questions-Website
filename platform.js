@@ -1,5 +1,5 @@
 /* ============================================================
-   PLATFORM.JS — EduAI Pro Shared Utilities
+   PLATFORM.JS â€” EduAI Pro Shared Utilities
    ============================================================ */
 
 // ---- DARK / LIGHT MODE ----
@@ -322,12 +322,12 @@ window.EduAI = {
 
 
 /* ============================================================
-   RBAC — ROLE-BASED ACCESS CONTROL ENGINE
+   RBAC â€” ROLE-BASED ACCESS CONTROL ENGINE
    3-Tier hierarchy: admin > teacher > student
    ============================================================ */
 (function initRBAC() {
 
-    // ── Core helpers ──────────────────────────────────────────
+    // â”€â”€ Core helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _getUser() {
         try { return JSON.parse(localStorage.getItem('eduai_current_user') || 'null'); }
         catch(e) { return null; }
@@ -343,7 +343,7 @@ window.EduAI = {
     function _isTeacher() { return _getRole() === 'teacher'; }
     function _isStudent() { return _getRole() === 'student'; }
 
-    // ── Route guard ───────────────────────────────────────────
+    // â”€â”€ Route guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Call from any restricted page. Redirects and returns false if blocked.
     function enforceAccess(allowedRoles) {
         const role = _getRole();
@@ -353,14 +353,14 @@ window.EduAI = {
         }
         if (!allowedRoles.includes(role)) {
             const label = role.charAt(0).toUpperCase() + role.slice(1);
-            showToast(`⛔ Access denied — ${label} accounts cannot access this area.`, 'error', 4000);
+            showToast(`â›” Access denied â€” ${label} accounts cannot access this area.`, 'error', 4000);
             setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
             return false;
         }
         return true;
     }
 
-    // ── Dashboard sidebar visibility ──────────────────────────
+    // â”€â”€ Dashboard sidebar visibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Hides/shows nav items based on role. Called after DOMContentLoaded.
     function applyDashboardNav() {
         const role = _getRole();
@@ -381,12 +381,12 @@ window.EduAI = {
         // Stamp a role badge on the sidebar user area
         const levelEl = document.getElementById('user-level-mini');
         if (levelEl) {
-            const roleLabels = { admin: '🛡️ Admin', teacher: '📚 Teacher', student: '🎓 Student' };
+            const roleLabels = { admin: 'ðŸ›¡ï¸ Admin', teacher: 'ðŸ“š Teacher', student: 'ðŸŽ“ Student' };
             levelEl.textContent = roleLabels[role] || 'Student';
         }
     }
 
-    // ── Admin Panel injection ─────────────────────────────────
+    // â”€â”€ Admin Panel injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function injectAdminPanel() {
         if (!_isAdmin()) return;
         // Only inject if the dashboard main container exists
@@ -401,7 +401,7 @@ window.EduAI = {
         <div class="dash-card" style="margin-bottom:20px;">
             <div class="dash-card-header">
                 <h3><i class="fas fa-user-shield" style="color:#ef4444"></i> Admin Control Panel</h3>
-                <span class="level-badge" style="background:linear-gradient(135deg,#ef4444,#a855f7);color:#fff;">🛡️ ADMIN ONLY</span>
+                <span class="level-badge" style="background:linear-gradient(135deg,#ef4444,#a855f7);color:#fff;">ðŸ›¡ï¸ ADMIN ONLY</span>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:8px;" id="admin-stat-cards">
                 <div class="stat-widget">
@@ -466,7 +466,7 @@ window.EduAI = {
         <div class="dash-card" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.04);">
             <div class="dash-card-header">
                 <h3><i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Danger Zone</h3>
-                <span style="font-size:0.78rem;color:var(--text3);">Irreversible operations — proceed with caution</span>
+                <span style="font-size:0.78rem;color:var(--text3);">Irreversible operations â€” proceed with caution</span>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;">
                 <button onclick="window._rbacAdmin.wipeQuizData()" style="padding:10px 20px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-family:var(--font-main);font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
@@ -486,7 +486,7 @@ window.EduAI = {
         window._rbacAdmin.refreshUsers();
     }
 
-    // ── Admin operations object ───────────────────────────────
+    // â”€â”€ Admin operations object â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window._rbacAdmin = {
 
         getAllUsers() {
@@ -524,11 +524,11 @@ window.EduAI = {
                 : users.map((u, i) => `
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s;" onmouseover="this.style.background='rgba(108,99,255,0.05)'" onmouseout="this.style.background=''">
                         <td style="padding:12px 12px;color:var(--text3);">${i + 1}</td>
-                        <td style="padding:12px 12px;font-weight:600;color:var(--text);">${u.name || '—'}</td>
-                        <td style="padding:12px 12px;color:var(--text2);font-size:0.82rem;">${u.email || '—'}</td>
+                        <td style="padding:12px 12px;font-weight:600;color:var(--text);">${u.name || 'â€”'}</td>
+                        <td style="padding:12px 12px;color:var(--text2);font-size:0.82rem;">${u.email || 'â€”'}</td>
                         <td style="padding:12px 12px;">${roleBadge(u.role || 'student')}</td>
                         <td style="padding:12px 12px;color:#a78bfa;font-weight:700;">${(u.xp || 0).toLocaleString()}</td>
-                        <td style="padding:12px 12px;color:var(--text3);font-size:0.78rem;">${u.joinDate ? new Date(u.joinDate).toLocaleDateString() : '—'}</td>
+                        <td style="padding:12px 12px;color:var(--text3);font-size:0.78rem;">${u.joinDate ? new Date(u.joinDate).toLocaleDateString() : 'â€”'}</td>
                         <td style="padding:12px 12px;">
                             <div style="display:flex;gap:6px;">
                                 <button onclick="window._rbacAdmin.changeRole('${u.email}', '${u.role || 'student'}')"
@@ -547,21 +547,21 @@ window.EduAI = {
         },
 
         deleteUser(email) {
-            if (!confirm(`⚠️ Permanently delete user: ${email}?\n\nThis action cannot be undone.`)) return;
+            if (!confirm(`âš ï¸ Permanently delete user: ${email}?\n\nThis action cannot be undone.`)) return;
             let users = this.getAllUsers().filter(u => u.email !== email);
             localStorage.setItem('eduai_users', JSON.stringify(users));
             // Also clear their personal data keys
             ['eduai_field_', 'eduai_questions_', 'eduai_college_'].forEach(prefix => {
                 localStorage.removeItem(prefix + email.toLowerCase().trim());
             });
-            showToast(`✅ User ${email} deleted.`, 'success');
+            showToast(`âœ… User ${email} deleted.`, 'success');
             this.refreshUsers();
         },
 
         changeRole(email, currentRole) {
             const roles = ['student', 'teacher', 'admin'];
             const next = roles[(roles.indexOf(currentRole) + 1) % roles.length];
-            if (!confirm(`Change ${email}'s role from ${currentRole} → ${next}?`)) return;
+            if (!confirm(`Change ${email}'s role from ${currentRole} â†’ ${next}?`)) return;
             let users = this.getAllUsers();
             const u = users.find(u => u.email === email);
             if (u) {
@@ -573,7 +573,7 @@ window.EduAI = {
                     cur.role = next;
                     localStorage.setItem('eduai_current_user', JSON.stringify(cur));
                 }
-                showToast(`✅ ${email} is now a ${next}.`, 'success');
+                showToast(`âœ… ${email} is now a ${next}.`, 'success');
                 this.refreshUsers();
             }
         },
@@ -588,30 +588,30 @@ window.EduAI = {
             a.href = URL.createObjectURL(blob);
             a.download = `eduai_users_${new Date().toISOString().slice(0,10)}.csv`;
             a.click();
-            showToast('📥 Users exported as CSV.', 'success');
+            showToast('ðŸ“¥ Users exported as CSV.', 'success');
         },
 
         wipeQuizData() {
-            if (!confirm('⚠️ Wipe ALL quiz results and session data for all users?\n\nThis clears quizResults, examSettings, and customQuestions.')) return;
+            if (!confirm('âš ï¸ Wipe ALL quiz results and session data for all users?\n\nThis clears quizResults, examSettings, and customQuestions.')) return;
             ['quizResults','examSettings','customQuestions','selectedFormats','questionField','quizMode','quizProgress']
                 .forEach(k => sessionStorage.removeItem(k));
             localStorage.removeItem('latestQuizResults');
-            showToast('🗑️ All quiz data wiped.', 'success');
+            showToast('ðŸ—‘ï¸ All quiz data wiped.', 'success');
         },
 
         wipeAllQuestions() {
-            if (!confirm('⚠️ Delete ALL stored questions for every user?\n\nThis cannot be undone.')) return;
+            if (!confirm('âš ï¸ Delete ALL stored questions for every user?\n\nThis cannot be undone.')) return;
             const users = this.getAllUsers();
             users.forEach(u => {
                 if (u.email) localStorage.removeItem('eduai_questions_' + u.email.toLowerCase().trim());
             });
-            showToast('🗑️ All question pools cleared.', 'success');
+            showToast('ðŸ—‘ï¸ All question pools cleared.', 'success');
         },
 
         resetPlatform() {
-            const first = prompt('⚠️ FULL RESET: Type "RESET" to confirm. This deletes ALL users, data, and settings.');
+            const first = prompt('âš ï¸ FULL RESET: Type "RESET" to confirm. This deletes ALL users, data, and settings.');
             if (first !== 'RESET') { showToast('Reset cancelled.', 'info'); return; }
-            const second = confirm('🚨 FINAL WARNING: This is irreversible. All data will be permanently erased. Continue?');
+            const second = confirm('ðŸš¨ FINAL WARNING: This is irreversible. All data will be permanently erased. Continue?');
             if (!second) { showToast('Reset cancelled.', 'info'); return; }
             // Clear all eduai_ keys
             const toRemove = [];
@@ -621,12 +621,12 @@ window.EduAI = {
             }
             toRemove.forEach(k => localStorage.removeItem(k));
             sessionStorage.clear();
-            showToast('💥 Platform fully reset. Redirecting...', 'warn', 3000);
+            showToast('ðŸ’¥ Platform fully reset. Redirecting...', 'warn', 3000);
             setTimeout(() => { window.location.href = 'auth.html'; }, 2500);
         }
     };
 
-    // ── Public API ────────────────────────────────────────────
+    // â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.EduAI.RBAC = {
         getUser:          _getUser,
         getRole:          _getRole,
@@ -647,7 +647,7 @@ window.EduAI = {
    ============================================================ */
 (function() {
 
-    // ── Helpers ──────────────────────────────────────────────
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _getContext() {
         // Reads student's college / field from localStorage + sessionStorage
         let college = '', field = '', level = 'General', subject = '';
@@ -676,7 +676,7 @@ window.EduAI = {
         return localStorage.getItem('eduai_tutor_api_key') || '';
     }
 
-    // ── System Prompt ─────────────────────────────────────────
+    // â”€â”€ System Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _buildSystemPrompt(ctx) {
         return `You are the official AI Tutor integrated into EduAI Pro, a professional educational platform.
 
@@ -708,7 +708,7 @@ COLLEGE ADAPTATION:
 - Commerce/Business: accounting, economics, management, statistics, marketing, finance.
 - Law: legal analysis, contracts, constitutional law, civil law, legal terminology.
 
-QUESTION TYPE SYSTEM — support these formats:
+QUESTION TYPE SYSTEM â€” support these formats:
 MCQ, True/False, Complete the following, Essay Questions, Problem Solving, Coding Questions, Case Study Questions, Practical Questions, Scenario-based Questions.
 For each: clean formatting, educational correctness, no repetition, match difficulty: Easy / Medium / Hard / Advanced.
 
@@ -716,11 +716,11 @@ USER INTERACTION RULES:
 - Guide the student step-by-step.
 - Explain mistakes gently and encourage learning.
 - Help students understand instead of only giving answers.
-- If user says "Explain" → detailed educational explanation.
-- If user says "Give me quiz" or "Quiz me" → formatted quiz questions.
-- If user says "Solve this" → solve step-by-step.
-- If user says "Summarize" → organized summary.
-- If user says "Generate exam" → complete professional exam.
+- If user says "Explain" â†’ detailed educational explanation.
+- If user says "Give me quiz" or "Quiz me" â†’ formatted quiz questions.
+- If user says "Solve this" â†’ solve step-by-step.
+- If user says "Summarize" â†’ organized summary.
+- If user says "Generate exam" â†’ complete professional exam.
 
 UI/UX RESPONSE STYLE:
 - Use sections and spacing.
@@ -743,7 +743,7 @@ ADVANCED CAPABILITIES:
 - Maintain conversational memory during the session.`;
     }
 
-    // ── Simple Markdown Renderer ──────────────────────────────
+    // â”€â”€ Simple Markdown Renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _renderMarkdown(text) {
         return text
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -761,7 +761,7 @@ ADVANCED CAPABILITIES:
             .replace(/\n/g, '<br>');
     }
 
-    // ── Chat History (session-persistent across page nav) ─────
+    // â”€â”€ Chat History (session-persistent across page nav) â”€â”€â”€â”€â”€
     const HISTORY_KEY = 'eduai_tutor_history';
     function _loadHistory() {
         try { return JSON.parse(sessionStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
@@ -771,7 +771,7 @@ ADVANCED CAPABILITIES:
         sessionStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(-40)));
     }
 
-    // ── Inject HTML ───────────────────────────────────────────
+    // â”€â”€ Inject HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _inject() {
         if (document.getElementById('eduai-tutor-fab')) return; // already injected
 
@@ -828,7 +828,7 @@ ADVANCED CAPABILITIES:
         _updateContext();
     }
 
-    // ── Update context label dynamically ──────────────────────
+    // â”€â”€ Update context label dynamically â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _updateContext() {
         const ctx = _getContext();
         const label = ctx.subject || ctx.college || 'General';
@@ -838,7 +838,7 @@ ADVANCED CAPABILITIES:
         if (inp) inp.placeholder = 'Ask me anything about ' + label + '...';
     }
 
-    // ── Restore history from sessionStorage ───────────────────
+    // â”€â”€ Restore history from sessionStorage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _restoreHistory() {
         const history = _loadHistory();
         const chatEl = document.getElementById('tutor-messages');
@@ -854,7 +854,7 @@ ADVANCED CAPABILITIES:
         }
     }
 
-    // ── Welcome message ───────────────────────────────────────
+    // â”€â”€ Welcome message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _appendBotWelcome() {
         const ctx = _getContext();
         const subject = ctx.subject || ctx.college || 'your subject';
@@ -887,7 +887,7 @@ ADVANCED CAPABILITIES:
         return ['Explain a concept', 'Give me a quiz', 'Generate an exam question'];
     }
 
-    // ── Render a message bubble ───────────────────────────────
+    // â”€â”€ Render a message bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _renderMessage(sender, text, scroll) {
         if (scroll === undefined) scroll = true;
         const chatEl = document.getElementById('tutor-messages');
@@ -902,7 +902,7 @@ ADVANCED CAPABILITIES:
         if (scroll) chatEl.scrollTop = chatEl.scrollHeight;
     }
 
-    // ── Typing indicator ──────────────────────────────────────
+    // â”€â”€ Typing indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _showTyping() {
         const chatEl = document.getElementById('tutor-messages');
         if (!chatEl) return;
@@ -916,7 +916,7 @@ ADVANCED CAPABILITIES:
         if (t) t.remove();
     }
 
-    // ── Call Gemini API ───────────────────────────────────────
+    // â”€â”€ Call Gemini API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _callGemini(apiKey, messages, onSuccess, onError) {
         const ctx = _getContext();
         const sysPrompt = _buildSystemPrompt(ctx);
@@ -961,7 +961,7 @@ ADVANCED CAPABILITIES:
         .catch(function(e) { onError(e.message || 'Network error.'); });
     }
 
-    // ── Send a message ────────────────────────────────────────
+    // â”€â”€ Send a message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window._tutorSend = function(text) {
         if (!text || typeof text !== 'string') return;
         text = text.trim();
@@ -997,13 +997,13 @@ ADVANCED CAPABILITIES:
             },
             function(err) {
                 _hideTyping();
-                _renderMessage('bot', '⚠️ Sorry, I encountered an error: ' + err + '\n\nPlease check your API key or try again.');
+                _renderMessage('bot', 'âš ï¸ Sorry, I encountered an error: ' + err + '\n\nPlease check your API key or try again.');
                 if (sendBtn) sendBtn.disabled = false;
             }
         );
     };
 
-    // ── Show / Hide API Key Setup ─────────────────────────────
+    // â”€â”€ Show / Hide API Key Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _showKeySetup() {
         const setup = document.getElementById('tutor-key-setup');
         const msgs  = document.getElementById('tutor-messages');
@@ -1021,7 +1021,7 @@ ADVANCED CAPABILITIES:
         if (row)   row.style.display   = 'flex';
     }
 
-    // ── Toggle panel ──────────────────────────────────────────
+    // â”€â”€ Toggle panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _toggle() {
         const panel = document.getElementById('eduai-tutor-panel');
         const fab   = document.getElementById('eduai-tutor-fab');
@@ -1044,7 +1044,7 @@ ADVANCED CAPABILITIES:
         }
     }
 
-    // ── Bind events ───────────────────────────────────────────
+    // â”€â”€ Bind events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function _bindEvents() {
         document.getElementById('eduai-tutor-fab').addEventListener('click', _toggle);
         document.getElementById('tutor-close-btn').addEventListener('click', _toggle);
@@ -1093,409 +1093,563 @@ ADVANCED CAPABILITIES:
         });
     }
 
-    // ── Courses System ─────────────────────────────────────────
-    const COURSES_DB_KEY = 'eduai_courses_db';
-    const COURSE_PROG_PREFIX = 'eduai_prog_';
+    // ── LMS Courses System ─────────────────────────────────────
+    const LMS_DB = 'eduai_lms_courses';
+    let _lmsCourses = [];
+    let _currentCourseId = null;
+    let _currentPlayerLesson = null;
+    let _playerInstance = null;
 
-    let _coursesCache = [];
-    let _activeCourseId = null;
-    let _activeVidId = null;
-    let _courseEditingId = null; // null = new, string = edit
-    let _vidCounter = 0;
-
-    function _initCoursesDb() {
-        const d = localStorage.getItem(COURSES_DB_KEY);
-        if (d) { _coursesCache = JSON.parse(d); return; }
-        // Default sample courses
-        _coursesCache = [
-            {
-                id: 'c_' + Date.now() + '1',
-                title: 'Advanced JavaScript Mastery',
-                desc: 'Master closures, async/await, and design patterns.',
-                cat: 'Programming', color: '#6c63ff',
-                videos: [
-                    { id: 'v1', title: 'Intro to Closures', url: 'https://www.youtube.com/embed/vKJpN5FAeF4', dur: '10:45' },
-                    { id: 'v2', title: 'Async & Await', url: 'https://www.youtube.com/embed/vn3tm0quoqE', dur: '15:20' }
-                ]
-            },
-            {
-                id: 'c_' + Date.now() + '2',
-                title: 'UI/UX Fundamentals',
-                desc: 'Learn spacing, typography, and color theory.',
-                cat: 'Design', color: '#ec4899',
-                videos: [
-                    { id: 'v3', title: 'Color Theory', url: 'https://www.youtube.com/embed/xYXhB2o-x0k', dur: '08:30' }
-                ]
-            }
-        ];
-        _saveCourses();
-    }
-    function _saveCourses() { localStorage.setItem(COURSES_DB_KEY, JSON.stringify(_coursesCache)); }
-
-    function _getProg(courseId) {
-        const email = EduAI.RBAC.getUser().email;
-        if (!email) return [];
-        const raw = localStorage.getItem(COURSE_PROG_PREFIX + email + '_' + courseId);
-        return raw ? JSON.parse(raw) : [];
-    }
-    function _saveProg(courseId, arr) {
-        const email = EduAI.RBAC.getUser().email;
-        if (email) localStorage.setItem(COURSE_PROG_PREFIX + email + '_' + courseId, JSON.stringify(arr));
-    }
-
-    window.EduAI.Courses = {
-        init: function() {
-            _initCoursesDb();
-            const grid = document.getElementById('courses-grid');
-            if (grid) {
-                this.renderTabs();
-                this.renderGrid('all');
-                
-                // Add event listener for search
-                const search = document.getElementById('course-search-input');
-                if (search) {
-                    search.addEventListener('input', (e) => {
-                        const q = e.target.value.toLowerCase().trim();
-                        const activeCat = document.querySelector('.cft-pill.active')?.dataset.cat || 'all';
-                        this.renderGrid(activeCat, q);
-                    });
+    // Default data structure if DB empty
+    const _defaultCourses = [
+        {
+            id: 'c1',
+            title: 'Advanced Mathematics',
+            desc: 'Master calculus and linear algebra with interactive lessons.',
+            category: 'math',
+            status: 'published',
+            thumbnail: 'fa-square-root-variable',
+            color: '#a855f7',
+            modules: [
+                {
+                    id: 'm1', title: 'Calculus Basics',
+                    lessons: [
+                        { id: 'l1', title: 'Limits and Continuity', dur: '12:00', type: 'yt', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+                        { id: 'l2', title: 'Derivatives', dur: '15:30', type: 'mp4', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+                    ]
                 }
-            }
+            ]
+        }
+    ];
 
-            // Swatches
-            document.querySelectorAll('.cc-swatch').forEach(sw => {
-                sw.addEventListener('click', () => {
-                    document.querySelectorAll('.cc-swatch').forEach(s => s.classList.remove('picked'));
-                    sw.classList.add('picked');
+    function _saveLMS() {
+        localStorage.setItem(LMS_DB, JSON.stringify(_lmsCourses));
+    }
+
+    function _loadLMS() {
+        try {
+            const raw = localStorage.getItem(LMS_DB);
+            _lmsCourses = raw ? JSON.parse(raw) : _defaultCourses;
+        } catch(e) {
+            _lmsCourses = _defaultCourses;
+        }
+    }
+
+    function _canEdit() {
+        if (!window.EduAI || !window.EduAI.RBAC) return false;
+        return window.EduAI.RBAC.hasRole('admin') || window.EduAI.RBAC.hasRole('teacher');
+    }
+
+    function _generateId() {
+        return Math.random().toString(36).substr(2, 9);
+    }
+
+    function _getYtVideoId(url) {
+        const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+        return match ? match[1] : null;
+    }
+
+    // -- Views Management --
+    const LibraryView = document.getElementById('lms-library-view');
+    const RoomView = document.getElementById('lms-room-view');
+    const PlayerView = document.getElementById('lms-player-view');
+    const LMSSections = [LibraryView, RoomView, PlayerView];
+
+    function _showLMSView(view) {
+        LMSSections.forEach(s => s && (s.style.display = 'none'));
+        if(view) view.style.display = 'block';
+    }
+
+    // -- Library --
+    function renderLibrary(filter = 'all') {
+        _showLMSView(LibraryView);
+        const grid = document.getElementById('lms-courses-grid');
+        if (!grid) return;
+        
+        // Setup permissions
+        const addBtn = document.getElementById('lms-add-course-btn');
+        if (addBtn) addBtn.style.display = _canEdit() ? 'inline-flex' : 'none';
+
+        let courses = _lmsCourses;
+        if (filter !== 'all') {
+            courses = courses.filter(c => c.category === filter);
+        }
+        
+        // Search filter
+        const searchInput = document.getElementById('lms-search-input');
+        const searchQ = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        if (searchQ) {
+            courses = courses.filter(c => c.title.toLowerCase().includes(searchQ) || c.desc.toLowerCase().includes(searchQ));
+        }
+
+        if (courses.length === 0) {
+            grid.innerHTML = `
+                <div class="lms-empty">
+                    <div class="lms-empty-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <h3>No Courses Found</h3>
+                    <p>There are no courses matching your current filters.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = courses.map(c => {
+            // Count total lessons
+            let totalLessons = 0;
+            if (c.modules) {
+                c.modules.forEach(m => {
+                    if (m.lessons) totalLessons += m.lessons.length;
                 });
-            });
-        },
-
-        renderTabs: function() {
-            const wrap = document.getElementById('courses-filter-tabs');
-            if (!wrap) return;
-            const cats = new Set();
-            _coursesCache.forEach(c => { if(c.cat) cats.add(c.cat); });
+            }
             
-            let html = `<button class="cft-pill active" data-cat="all">All Courses</button>`;
-            cats.forEach(c => { html += `<button class="cft-pill" data-cat="${c}">${c}</button>`; });
-            wrap.innerHTML = html;
+            // Random progress mock for demo
+            const prog = Math.floor(Math.random() * 100);
 
-            wrap.querySelectorAll('.cft-pill').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    wrap.querySelectorAll('.cft-pill').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    const q = document.getElementById('course-search-input')?.value.toLowerCase().trim() || '';
-                    this.renderGrid(btn.dataset.cat, q);
-                });
-            });
-        },
-
-        renderGrid: function(catFilter = 'all', searchQ = '') {
-            const grid = document.getElementById('courses-grid');
-            if (!grid) return;
-
-            let filtered = _coursesCache;
-            if (catFilter !== 'all') {
-                filtered = filtered.filter(c => c.cat === catFilter);
-            }
-            if (searchQ) {
-                filtered = filtered.filter(c => 
-                    c.title.toLowerCase().includes(searchQ) || 
-                    (c.desc && c.desc.toLowerCase().includes(searchQ))
-                );
+            let actionBtns = '';
+            if (_canEdit()) {
+                actionBtns = `
+                    <div class="lms-card-actions">
+                        <button class="lms-card-btn lms-card-btn-edit" onclick="event.stopPropagation(); EduAI.Courses.openCourseModal('${c.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="lms-card-btn lms-card-btn-del" onclick="event.stopPropagation(); EduAI.Courses.deleteCourse('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
             }
 
-            if (filtered.length === 0) {
-                grid.innerHTML = `
-                    <div class="courses-empty">
-                        <div class="courses-empty-icon"><i class="fas fa-search"></i></div>
-                        <h3>No Courses Found</h3>
-                        <p>Try adjusting your search or filter to find what you're looking for.</p>
-                    </div>`;
-                return;
-            }
+            return `
+                <div class="lms-course-card" onclick="EduAI.Courses.openRoom('${c.id}')">
+                    <div class="lms-card-banner">
+                        <div class="lms-card-banner-bg" style="background: linear-gradient(135deg, ${c.color || '#a855f7'}40, #111827);"></div>
+                        <div class="lms-card-icon-wrap" style="color: ${c.color || '#a855f7'}">
+                            <i class="fa-solid ${c.thumbnail || 'fa-book'}"></i>
+                        </div>
+                        ${c.status === 'draft' ? `<div class="lms-status-draft">DRAFT</div>` : ''}
+                        ${actionBtns}
+                        <div class="lms-card-stats-overlay">
+                            <span><i class="fa-solid fa-layer-group"></i> ${c.modules ? c.modules.length : 0} Modules</span>
+                            <span><i class="fa-solid fa-play"></i> ${totalLessons} Lessons</span>
+                        </div>
+                    </div>
+                    <div class="lms-card-body">
+                        <div class="lms-card-cat" style="color:${c.color||'#a855f7'}; border-color:${c.color||'#a855f7'}40; background:${c.color||'#a855f7'}15">
+                            ${c.category.toUpperCase()}
+                        </div>
+                        <div class="lms-card-title">${c.title}</div>
+                        <div class="lms-card-desc">${c.desc}</div>
+                        <div class="lms-card-prog">
+                            <div class="lms-card-prog-label"><span>Course Progress</span> <span>${prog}%</span></div>
+                            <div class="lms-card-prog-track">
+                                <div class="lms-card-prog-fill" style="width:${prog}%; background:${c.color||'#a855f7'}"></div>
+                            </div>
+                        </div>
+                        <button class="lms-open-btn" style="background: linear-gradient(135deg, ${c.color||'#a855f7'}, ${c.color||'#a855f7'}dd)">
+                            Enter Course <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 
-            const isAdmin = EduAI.RBAC.isAdmin();
+    // -- Course Room --
+    function renderRoom(courseId) {
+        const course = _lmsCourses.find(c => c.id === courseId);
+        if(!course) return renderLibrary();
+        _currentCourseId = course.id;
+        _showLMSView(RoomView);
+
+        document.getElementById('lms-room-icon').className = `fa-solid ${course.thumbnail || 'fa-book'}`;
+        document.getElementById('lms-room-icon-wrap').style.background = course.color || '#a855f7';
+        document.getElementById('lms-room-cat').innerText = course.category.toUpperCase();
+        document.getElementById('lms-room-cat').style.color = course.color || '#a855f7';
+        document.getElementById('lms-room-title').innerText = course.title;
+        document.getElementById('lms-room-desc').innerText = course.desc;
+
+        let totalLessons = 0;
+        let totalDur = 0; // naive string concat or parsing could go here, let's just count lessons
+        (course.modules || []).forEach(m => totalLessons += (m.lessons || []).length);
+        
+        document.getElementById('lms-room-stats').innerHTML = `
+            <span><i class="fa-solid fa-layer-group"></i> ${course.modules ? course.modules.length : 0} Modules</span>
+            <span><i class="fa-solid fa-play"></i> ${totalLessons} Lessons</span>
+        `;
+
+        const manageBtns = document.getElementById('lms-room-manage-btns');
+        if (_canEdit()) {
+            manageBtns.innerHTML = `
+                <button class="lms-btn-secondary" onclick="EduAI.Courses.openCourseModal('${course.id}')"><i class="fa-solid fa-pen"></i> Edit Details</button>
+                <button class="lms-btn-primary" onclick="EduAI.Courses.addModule('${course.id}')"><i class="fa-solid fa-folder-plus"></i> Add Module</button>
+            `;
+        } else {
+            manageBtns.innerHTML = '';
+        }
+
+        const modsContainer = document.getElementById('lms-modules-container');
+        if (!course.modules || course.modules.length === 0) {
+            modsContainer.innerHTML = `
+                <div class="lms-empty-modules">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <h3>No Modules Yet</h3>
+                    <p>${_canEdit() ? 'Start building this course by adding a module.' : 'Content for this course is coming soon.'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        modsContainer.innerHTML = course.modules.map((m, mIndex) => {
+            const lessons = m.lessons || [];
             
-            let html = '';
-            filtered.forEach(c => {
-                const prog = _getProg(c.id);
-                const total = c.videos.length;
-                const completed = prog.length;
-                const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
-                
-                let adminHtml = '';
-                if (isAdmin) {
-                    adminHtml = `
-                        <div class="course-admin-btns">
-                            <button class="cab-btn cab-edit" onclick="event.stopPropagation(); EduAI.Courses.openEditModal('${c.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="cab-btn cab-del" onclick="event.stopPropagation(); EduAI.Courses.deleteCourse('${c.id}')"><i class="fas fa-trash"></i></button>
+            let modActions = '';
+            if (_canEdit()) {
+                modActions = `
+                    <div class="lms-mod-actions">
+                        <button class="lms-mod-btn" onclick="event.stopPropagation(); EduAI.Courses.openLessonModal('${m.id}')"><i class="fa-solid fa-plus"></i> Add Lesson</button>
+                        <button class="lms-mod-btn lms-mod-btn-edit" onclick="event.stopPropagation(); EduAI.Courses.renameModule('${m.id}')" title="Rename"><i class="fa-solid fa-pen"></i></button>
+                        <button class="lms-mod-btn lms-mod-btn-del" onclick="event.stopPropagation(); EduAI.Courses.deleteModule('${m.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            }
+
+            let lessonsHtml = lessons.length === 0 
+                ? `<div class="lms-no-lessons"><i class="fa-solid fa-circle-exclamation"></i> No lessons in this module.</div>`
+                : lessons.map((l, lIndex) => {
+                    let badge = '';
+                    if (l.type === 'yt') badge = `<span class="lms-vid-badge lms-vid-yt"><i class="fa-brands fa-youtube"></i> YouTube</span>`;
+                    else if (l.type === 'mp4') badge = `<span class="lms-vid-badge lms-vid-mp4"><i class="fa-solid fa-video"></i> MP4</span>`;
+                    
+                    let draftBadge = l.status === 'draft' ? `<span class="lms-lesson-status-draft">DRAFT</span>` : '';
+                    
+                    let lessActions = '';
+                    if (_canEdit()) {
+                        lessActions = `
+                            <button class="lms-lesson-btn lms-lesson-btn-edit" onclick="event.stopPropagation(); EduAI.Courses.openLessonModal('${m.id}', '${l.id}')"><i class="fa-solid fa-pen"></i></button>
+                            <button class="lms-lesson-btn lms-lesson-btn-del" onclick="event.stopPropagation(); EduAI.Courses.deleteLesson('${m.id}', '${l.id}')"><i class="fa-solid fa-trash"></i></button>
+                        `;
+                    }
+                    
+                    // random done state for demo
+                    const isDone = Math.random() > 0.5;
+
+                    return `
+                        <div class="lms-lesson-row ${isDone?'done':''}" onclick="EduAI.Courses.openPlayer('${course.id}', '${m.id}', '${l.id}')">
+                            <div class="lms-lesson-left">
+                                <div class="lms-lesson-icon ${isDone?'done':''}">
+                                    ${isDone ? `<i class="fa-solid fa-check lms-lesson-done-icon"></i>` : `<span class="lms-lesson-num-badge">${lIndex + 1}</span>`}
+                                </div>
+                                <div class="lms-lesson-info">
+                                    <div class="lms-lesson-title">${l.title}</div>
+                                    <div class="lms-lesson-sub">
+                                        <span><i class="fa-regular fa-clock"></i> ${l.dur || '0:00'}</span>
+                                        ${badge}
+                                        ${draftBadge}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="lms-lesson-right">
+                                ${lessActions}
+                                <button class="lms-play-btn"><i class="fa-solid fa-play"></i></button>
+                            </div>
                         </div>
                     `;
-                }
+                }).join('');
 
-                html += `
-                    <div class="course-card" onclick="EduAI.Courses.openPlayer('${c.id}')">
-                        <div class="course-thumb" style="background: linear-gradient(135deg, ${c.color}, #1f2937)">
-                            <div class="course-thumb-overlay"></div>
-                            <i class="fas fa-play-circle course-thumb-icon"></i>
-                            <div class="course-vid-badge"><i class="fas fa-film"></i> ${total} Videos</div>
-                            ${adminHtml}
-                        </div>
-                        <div class="course-body">
-                            <div class="course-cat-tag" style="color: ${c.color}; border-color: ${c.color}40; background: ${c.color}15">
-                                <i class="fas fa-tag"></i> ${c.cat}
-                            </div>
-                            <div class="course-title-c">${c.title}</div>
-                            <div class="course-desc-c">${c.desc || 'No description provided.'}</div>
-                            
-                            <div class="course-prog-wrap">
-                                <div class="course-prog-lbl">
-                                    <span>Progress</span><span>${pct}%</span>
-                                </div>
-                                <div class="course-prog-track">
-                                    <div class="course-prog-fill-c" style="width: ${pct}%; background: ${c.color}"></div>
-                                </div>
-                            </div>
+            return `
+                <div class="lms-module-block" id="mod-${m.id}">
+                    <div class="lms-module-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                        <div class="lms-module-num" style="background: ${course.color||'#a855f7'}">${mIndex + 1}</div>
+                        <div class="lms-module-title">${m.title}</div>
+                        <div class="lms-module-info">
+                            <span>${lessons.length} Lessons</span>
+                            ${modActions}
+                            <i class="fa-solid fa-chevron-down lms-mod-chevron"></i>
                         </div>
                     </div>
-                `;
-            });
-            grid.innerHTML = html;
-        },
-
-        openPlayer: function(id) {
-            const course = _coursesCache.find(c => c.id === id);
-            if (!course) return;
-            _activeCourseId = id;
-            
-            document.getElementById('courses-library-view').style.display = 'none';
-            document.getElementById('courses-player-view').classList.add('visible');
-            
-            document.getElementById('cpv-course-name').textContent = course.title;
-            this.renderPlaylist();
-            
-            if (course.videos.length > 0) {
-                // Find first unwatched or just start first
-                const prog = _getProg(id);
-                let firstUnwatched = course.videos.find(v => !prog.includes(v.id));
-                this.loadVideo((firstUnwatched || course.videos[0]).id);
-            } else {
-                document.getElementById('cpv-iframe-wrap').innerHTML = `<div style="color:#fff; padding:40px; text-align:center;">No videos in this course yet.</div>`;
-                document.getElementById('cpv-video-title').textContent = "Empty Course";
-                document.getElementById('cpv-video-desc').textContent = "Waiting for admin to add content.";
-                document.getElementById('cpv-mark-btn').disabled = true;
-            }
-        },
-
-        closePlayer: function() {
-            _activeCourseId = null;
-            _activeVidId = null;
-            document.getElementById('cpv-iframe-wrap').innerHTML = ''; // stop video
-            document.getElementById('courses-player-view').classList.remove('visible');
-            document.getElementById('courses-library-view').style.display = 'block';
-            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
-        },
-
-        renderPlaylist: function() {
-            if (!_activeCourseId) return;
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            const prog = _getProg(_activeCourseId);
-            const total = course.videos.length;
-            const completed = prog.length;
-            const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-            document.getElementById('cpv-prog-count').textContent = `${completed}/${total} Completed`;
-            document.getElementById('cpv-prog-fill').style.width = pct + '%';
-            document.getElementById('cpv-prog-fill').style.background = course.color;
-
-            let html = '';
-            course.videos.forEach((v, idx) => {
-                const isDone = prog.includes(v.id);
-                const isActive = v.id === _activeVidId;
-                let cClass = isActive ? 'active' : '';
-                if (isDone) cClass += ' done';
-                
-                html += `
-                    <div class="cpv-lesson ${cClass}" onclick="EduAI.Courses.loadVideo('${v.id}')">
-                        <div class="cpv-lesson-num">${idx + 1}</div>
-                        <div class="cpv-lesson-info">
-                            <div class="cpv-lesson-name">${v.title}</div>
-                            <div class="cpv-lesson-dur"><i class="far fa-clock"></i> ${v.dur || '10:00'}</div>
-                        </div>
-                        <i class="fas fa-check-circle cpv-check"></i>
+                    <div class="lms-module-body">
+                        ${lessonsHtml}
                     </div>
-                `;
-            });
-            document.getElementById('cpv-playlist-body').innerHTML = html;
-        },
-
-        loadVideo: function(vidId) {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            const vid = course.videos.find(v => v.id === vidId);
-            if (!vid) return;
-            _activeVidId = vidId;
-
-            // Generate iframe
-            let iframeUrl = vid.url;
-            if (iframeUrl.includes('youtube.com/watch?v=')) {
-                iframeUrl = iframeUrl.replace('watch?v=', 'embed/');
-            }
-            document.getElementById('cpv-iframe-wrap').innerHTML = `<iframe src="${iframeUrl}" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
-            document.getElementById('cpv-video-title').textContent = vid.title;
-            document.getElementById('cpv-video-desc').textContent = "Instructor module for " + vid.title;
-
-            const btn = document.getElementById('cpv-mark-btn');
-            btn.disabled = false;
-            btn.onclick = () => { this.markCompleted(vidId); };
-            
-            const prog = _getProg(_activeCourseId);
-            if (prog.includes(vidId)) {
-                btn.innerHTML = `<i class="fas fa-check"></i> Completed`;
-                btn.style.background = 'var(--bg3)';
-                btn.style.color = 'var(--text3)';
-            } else {
-                btn.innerHTML = `<i class="fas fa-check-circle"></i> Mark as Completed`;
-                btn.style.background = '';
-                btn.style.color = '';
-            }
-
-            this.renderPlaylist();
-        },
-
-        markCompleted: function(vidId) {
-            const prog = _getProg(_activeCourseId);
-            if (!prog.includes(vidId)) {
-                prog.push(vidId);
-                _saveProg(_activeCourseId, prog);
-            }
-            this.loadVideo(vidId); // refresh
-        },
-
-        /* --- Admin --- */
-        openCreateModal: function() {
-            _courseEditingId = null;
-            document.getElementById('cc-modal-title').textContent = "Create New Course";
-            document.getElementById('cc-course-name').value = '';
-            document.getElementById('cc-course-desc').value = '';
-            document.getElementById('cc-course-cat').value = 'Programming';
-            document.querySelectorAll('.cc-swatch')[0].click();
-            document.getElementById('cc-vid-list').innerHTML = '';
-            _vidCounter = 0;
-            this.addVideoRow(); // start with one blank
-            document.getElementById('cc-overlay').classList.add('open');
-        },
-
-        openEditModal: function(id) {
-            const c = _coursesCache.find(x => x.id === id);
-            if (!c) return;
-            _courseEditingId = id;
-            
-            document.getElementById('cc-modal-title').textContent = "Edit Course";
-            document.getElementById('cc-course-name').value = c.title;
-            document.getElementById('cc-course-desc').value = c.desc || '';
-            document.getElementById('cc-course-cat').value = c.cat || 'Programming';
-            
-            let matchedSwatch = false;
-            document.querySelectorAll('.cc-swatch').forEach(sw => {
-                sw.classList.remove('picked');
-                if (sw.dataset.c === c.color) { sw.classList.add('picked'); matchedSwatch = true; }
-            });
-            if (!matchedSwatch) document.querySelectorAll('.cc-swatch')[0].classList.add('picked');
-
-            const list = document.getElementById('cc-vid-list');
-            list.innerHTML = '';
-            _vidCounter = 0;
-            if (c.videos.length === 0) {
-                this.addVideoRow();
-            } else {
-                c.videos.forEach(v => {
-                    this.addVideoRow(v.title, v.url);
-                });
-            }
-
-            document.getElementById('cc-overlay').classList.add('open');
-        },
-
-        closeModal: function() {
-            document.getElementById('cc-overlay').classList.remove('open');
-        },
-
-        addVideoRow: function(title = '', url = '') {
-            _vidCounter++;
-            const id = 'vid_r_' + _vidCounter;
-            const div = document.createElement('div');
-            div.className = 'cc-vid-row';
-            div.id = id;
-            div.innerHTML = `
-                <input type="text" class="cc-vid-inp cv-title" placeholder="Video Title" value="${title}">
-                <input type="text" class="cc-vid-inp cv-url" placeholder="YouTube URL or embed link" value="${url}">
-                <button class="cc-vid-del" onclick="document.getElementById('${id}').remove()" title="Remove Video"><i class="fas fa-trash"></i></button>
+                </div>
             `;
-            document.getElementById('cc-vid-list').appendChild(div);
-        },
+        }).join('');
+    }
 
-        saveCourse: function() {
-            const title = document.getElementById('cc-course-name').value.trim();
-            if (!title) return alert("Course name is required.");
-            const desc = document.getElementById('cc-course-desc').value.trim();
-            const cat = document.getElementById('cc-course-cat').value;
-            const color = document.querySelector('.cc-swatch.picked')?.dataset.c || '#6c63ff';
+    // -- Player --
+    function renderPlayer(courseId, modId, lessonId) {
+        const course = _lmsCourses.find(c => c.id === courseId);
+        if(!course) return;
+        const mod = (course.modules||[]).find(m => m.id === modId);
+        if(!mod) return;
+        const lesson = (mod.lessons||[]).find(l => l.id === lessonId);
+        if(!lesson) return;
 
-            const videos = [];
-            document.querySelectorAll('.cc-vid-row').forEach((row, i) => {
-                const vt = row.querySelector('.cv-title').value.trim();
-                const vu = row.querySelector('.cv-url').value.trim();
-                if (vt || vu) {
-                    videos.push({
-                        id: 'v_' + Date.now() + '_' + i,
-                        title: vt || 'Untitled Video',
-                        url: vu || '',
-                        dur: '10:00' // mock duration
-                    });
-                }
+        _currentCourseId = course.id;
+        _currentPlayerLesson = lesson;
+        _showLMSView(PlayerView);
+        
+        document.getElementById('lms-pl-bc-course').innerText = course.title;
+        document.getElementById('lms-pl-bc-course').onclick = () => renderRoom(course.id);
+        document.getElementById('lms-pl-bc-lesson').innerText = lesson.title;
+
+        // Render Sidebar Playlist
+        let plHtml = '';
+        let globalLesIdx = 1;
+        course.modules.forEach(m => {
+            plHtml += `<div class="lms-pl-module"><div class="lms-pl-mod-title">${m.title}</div>`;
+            (m.lessons||[]).forEach(l => {
+                const isActive = (l.id === lesson.id);
+                // random done state for demo
+                const isDone = Math.random() > 0.5;
+                plHtml += `
+                    <div class="lms-pl-item ${isActive?'active':''}" onclick="EduAI.Courses.openPlayer('${course.id}','${m.id}','${l.id}')">
+                        <div class="lms-pl-num ${isDone?'done':''}">${isDone ? '<i class="fa-solid fa-check"></i>' : globalLesIdx}</div>
+                        <div class="lms-pl-info">
+                            <div class="lms-pl-title ${isActive?'active':''}">${l.title}</div>
+                            <div class="lms-pl-dur">${l.dur||'0:00'}</div>
+                        </div>
+                        <i class="fa-solid ${isActive ? 'fa-pause lms-pl-play-icon' : 'fa-play lms-pl-play-icon'}"></i>
+                    </div>
+                `;
+                globalLesIdx++;
             });
+            plHtml += `</div>`;
+        });
+        document.getElementById('lms-player-sidebar-list').innerHTML = plHtml;
 
-            if (_courseEditingId) {
-                const c = _coursesCache.find(x => x.id === _courseEditingId);
-                if (c) {
-                    c.title = title; c.desc = desc; c.cat = cat; c.color = color; c.videos = videos;
-                }
+        // Render Player
+        document.getElementById('lms-player-title').innerText = lesson.title;
+        document.getElementById('lms-player-desc').innerText = lesson.desc || 'No description provided for this lesson.';
+        
+        const vidWrap = document.getElementById('lms-video-wrap');
+        vidWrap.innerHTML = '';
+        
+        if (lesson.type === 'yt') {
+            const ytId = _getYtVideoId(lesson.url);
+            if(ytId) {
+                vidWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
-                _coursesCache.unshift({
-                    id: 'c_' + Date.now(),
-                    title: title, desc: desc, cat: cat, color: color, videos: videos
-                });
+                vidWrap.innerHTML = `<div class="lms-no-video"><i class="fa-solid fa-link-slash"></i><p>Invalid YouTube URL</p></div>`;
             }
-
-            _saveCourses();
-            this.closeModal();
-            this.renderTabs();
-            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
-        },
-
-        deleteCourse: function(id) {
-            if (!confirm('Are you sure you want to delete this course?')) return;
-            _coursesCache = _coursesCache.filter(c => c.id !== id);
-            _saveCourses();
-            this.renderTabs();
-            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
+        } else if (lesson.type === 'mp4') {
+            vidWrap.innerHTML = `<video src="${lesson.url}" controls autoplay controlsList="nodownload"></video>`;
+        } else {
+            vidWrap.innerHTML = `<div class="lms-no-video"><i class="fa-solid fa-video-slash"></i><p>No video source configured</p></div>`;
         }
-    };
+    }
 
+    // -- CRUD Modals & Actions --
+    function openCourseModal(id = null) {
+        const modal = document.getElementById('lms-course-modal');
+        const isEdit = !!id;
+        document.getElementById('cm-title').innerText = isEdit ? 'Edit Course' : 'Create New Course';
+        document.getElementById('cm-course-id').value = id || '';
+        
+        const course = isEdit ? _lmsCourses.find(c => c.id === id) : {};
+        
+        document.getElementById('cc-title').value = course.title || '';
+        document.getElementById('cc-cat').value = course.category || 'math';
+        document.getElementById('cc-status').value = course.status || 'published';
+        document.getElementById('cc-desc').value = course.desc || '';
+        
+        // Select Icon
+        const selIcon = course.thumbnail || 'fa-book';
+        document.querySelectorAll('#cc-icons .lms-icon-opt').forEach(el => {
+            el.classList.toggle('selected', el.dataset.val === selIcon);
+        });
+        // Select Color
+        const selColor = course.color || '#a855f7';
+        document.querySelectorAll('#cc-colors .lms-color-swatch').forEach(el => {
+            el.classList.toggle('selected', el.dataset.val === selColor);
+        });
 
-    // ── Init on DOMContentLoaded ──────────────────────────────
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _inject);
-    } else {
-        _inject();
+        modal.classList.add('open');
+    }
+
+    function saveCourse() {
+        const id = document.getElementById('cm-course-id').value;
+        const title = document.getElementById('cc-title').value.trim();
+        if(!title) return alert("Course title is required");
+
+        const selIcon = document.querySelector('#cc-icons .lms-icon-opt.selected')?.dataset.val || 'fa-book';
+        const selColor = document.querySelector('#cc-colors .lms-color-swatch.selected')?.dataset.val || '#a855f7';
+
+        const data = {
+            title,
+            category: document.getElementById('cc-cat').value,
+            status: document.getElementById('cc-status').value,
+            desc: document.getElementById('cc-desc').value.trim(),
+            thumbnail: selIcon,
+            color: selColor
+        };
+
+        if(id) {
+            const idx = _lmsCourses.findIndex(c => c.id === id);
+            if(idx>-1) _lmsCourses[idx] = { ..._lmsCourses[idx], ...data };
+        } else {
+            data.id = 'c_' + _generateId();
+            data.modules = [];
+            _lmsCourses.push(data);
+        }
+        
+        _saveLMS();
+        closeModals();
+        if(id && _currentCourseId === id) renderRoom(id);
+        else renderLibrary();
+    }
+
+    function deleteCourse(id) {
+        if(!confirm("Are you sure you want to delete this course and all its videos?")) return;
+        _lmsCourses = _lmsCourses.filter(c => c.id !== id);
+        _saveLMS();
+        renderLibrary();
+    }
+
+    function addModule(courseId) {
+        const title = prompt("Enter Module Title (e.g. Chapter 1: Introduction):");
+        if(!title) return;
+        const c = _lmsCourses.find(x => x.id === courseId);
+        if(!c.modules) c.modules = [];
+        c.modules.push({ id: 'm_' + _generateId(), title, lessons: [] });
+        _saveLMS();
+        renderRoom(courseId);
+    }
+    function renameModule(modId) {
+        const c = _lmsCourses.find(x => x.id === _currentCourseId);
+        const m = c.modules.find(x => x.id === modId);
+        const title = prompt("Rename Module:", m.title);
+        if(!title) return;
+        m.title = title;
+        _saveLMS();
+        renderRoom(_currentCourseId);
+    }
+    function deleteModule(modId) {
+        if(!confirm("Delete this module and all its lessons?")) return;
+        const c = _lmsCourses.find(x => x.id === _currentCourseId);
+        c.modules = c.modules.filter(x => x.id !== modId);
+        _saveLMS();
+        renderRoom(_currentCourseId);
+    }
+
+    // Lesson Modal
+    let _activeModId = null;
+    function openLessonModal(modId, lessonId = null) {
+        _activeModId = modId;
+        const modal = document.getElementById('lms-lesson-modal');
+        const isEdit = !!lessonId;
+        document.getElementById('lm-title-txt').innerText = isEdit ? 'Edit Lesson / Video' : 'Add New Lesson';
+        document.getElementById('lm-lesson-id').value = lessonId || '';
+        
+        const c = _lmsCourses.find(x => x.id === _currentCourseId);
+        const m = c.modules.find(x => x.id === modId);
+        const lesson = isEdit ? m.lessons.find(l => l.id === lessonId) : {};
+
+        document.getElementById('cl-title').value = lesson.title || '';
+        document.getElementById('cl-dur').value = lesson.dur || '';
+        document.getElementById('cl-status').value = lesson.status || 'published';
+        document.getElementById('cl-type').value = lesson.type || 'yt';
+        document.getElementById('cl-url').value = lesson.url || '';
+        document.getElementById('cl-desc').value = lesson.desc || '';
+
+        modal.classList.add('open');
+    }
+
+    function saveLesson() {
+        const id = document.getElementById('lm-lesson-id').value;
+        const title = document.getElementById('cl-title').value.trim();
+        const url = document.getElementById('cl-url').value.trim();
+        
+        if(!title || !url) return alert("Title and Video URL are required.");
+
+        const data = {
+            title,
+            dur: document.getElementById('cl-dur').value.trim() || '0:00',
+            status: document.getElementById('cl-status').value,
+            type: document.getElementById('cl-type').value,
+            url,
+            desc: document.getElementById('cl-desc').value.trim()
+        };
+
+        const c = _lmsCourses.find(x => x.id === _currentCourseId);
+        const m = c.modules.find(x => x.id === _activeModId);
+
+        if(id) {
+            const idx = m.lessons.findIndex(l => l.id === id);
+            if(idx > -1) m.lessons[idx] = { ...m.lessons[idx], ...data };
+        } else {
+            data.id = 'l_' + _generateId();
+            if(!m.lessons) m.lessons = [];
+            m.lessons.push(data);
+        }
+
+        _saveLMS();
+        closeModals();
+        renderRoom(_currentCourseId);
     }
     
+    function deleteLesson(modId, lessonId) {
+        if(!confirm("Delete this lesson?")) return;
+        const c = _lmsCourses.find(x => x.id === _currentCourseId);
+        const m = c.modules.find(x => x.id === modId);
+        m.lessons = m.lessons.filter(l => l.id !== lessonId);
+        _saveLMS();
+        renderRoom(_currentCourseId);
+    }
+
+    function closeModals() {
+        document.querySelectorAll('.lms-modal-overlay').forEach(el => el.classList.remove('open'));
+    }
+
+    window.EduAI = window.EduAI || {};
+    window.EduAI.Courses = {
+        init: () => {
+            _loadLMS();
+            // Bind filter pills
+            document.querySelectorAll('.lms-pill').forEach(pill => {
+                pill.addEventListener('click', (e) => {
+                    document.querySelectorAll('.lms-pill').forEach(p => p.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    renderLibrary(e.currentTarget.dataset.cat);
+                });
+            });
+            // Search
+            const sInp = document.getElementById('lms-search-input');
+            if(sInp) sInp.addEventListener('input', () => {
+                const activeCat = document.querySelector('.lms-pill.active')?.dataset.cat || 'all';
+                renderLibrary(activeCat);
+            });
+            // Modal icon pickers
+            document.querySelectorAll('#cc-icons .lms-icon-opt').forEach(opt => {
+                opt.addEventListener('click', (e) => {
+                    document.querySelectorAll('#cc-icons .lms-icon-opt').forEach(x => x.classList.remove('selected'));
+                    e.currentTarget.classList.add('selected');
+                });
+            });
+            // Modal color pickers
+            document.querySelectorAll('#cc-colors .lms-color-swatch').forEach(sw => {
+                sw.addEventListener('click', (e) => {
+                    document.querySelectorAll('#cc-colors .lms-color-swatch').forEach(x => x.classList.remove('selected'));
+                    e.currentTarget.classList.add('selected');
+                });
+            });
+            
+            // Re-render based on current view if needed
+            renderLibrary();
+        },
+        openLibrary: () => renderLibrary(),
+        openRoom: (id) => renderRoom(id),
+        openPlayer: (cid, mid, lid) => renderPlayer(cid, mid, lid),
+        openCourseModal,
+        saveCourse,
+        deleteCourse,
+        addModule,
+        renameModule,
+        deleteModule,
+        openLessonModal,
+        saveLesson,
+        deleteLesson,
+        closeModals
+    };
+    
+    // Auto-init on load if RBAC is ready
     document.addEventListener('DOMContentLoaded', () => {
-        if (window.EduAI && window.EduAI.Courses) EduAI.Courses.init();
+        if (window.EduAI.Courses) EduAI.Courses.init();
     });
 
 })();
-
-
