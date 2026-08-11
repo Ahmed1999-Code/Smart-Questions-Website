@@ -689,7 +689,7 @@
                         <i class="fas fa-search csw-icon"></i>
                         <input type="text" id="course-search-input" class="courses-search" placeholder="Search courses by name or category...">
                     </div>
-                    <button class="courses-add-btn rbac-admin-only" onclick="EduAI.Courses.openCreateModal()" style="display:none;" id="course-add-btn">
+                    <button class="courses-add-btn" onclick="EduAI.Courses.openCreateModal()" style="display:none !important;" id="course-add-btn">
                         <i class="fas fa-plus"></i> New Course
                     </button>
                 </div>
@@ -1296,8 +1296,8 @@
     }
     </script>
 
-    <!-- ========== COURSE CREATOR MODAL ========== -->
-    <div class="cc-overlay" id="cc-overlay">
+    <!-- ========== COURSE CREATOR MODAL (hidden) ========== -->
+    <div class="cc-overlay" id="cc-overlay" style="display:none !important;">
         <div class="cc-modal">
             <div class="cc-modal-hdr">
                 <div class="cc-modal-ico"><i class="fas fa-film"></i></div>
