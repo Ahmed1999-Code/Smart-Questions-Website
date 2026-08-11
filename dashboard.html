@@ -33,9 +33,6 @@
             <a href="#" class="sidebar-link" onclick="showSection('achievements')">
                 <i class="fas fa-trophy"></i><span>Achievements</span>
             </a>
-            <a href="#" class="sidebar-link sidebar-link-courses" id="nav-courses" onclick="showSection('courses')">
-                <i class="fas fa-graduation-cap"></i><span>Courses</span>
-            </a>
             <a href="#" class="sidebar-link" onclick="showSection('leaderboard')">
                 <i class="fas fa-crown"></i><span>Leaderboard</span>
             </a>
@@ -45,6 +42,9 @@
             <a href="#" class="sidebar-link sidebar-link-special rbac-teacher-only" id="specify-qtype-btn" onclick="openFieldModal()" title="Specify Question Type">
                 <i class="fas fa-sliders-h"></i><span>Specify Question Type</span>
                 <span class="sidebar-link-badge">NEW</span>
+            </a>
+            <a href="#" class="sidebar-link" id="nav-courses" onclick="showSection('courses')">
+                <i class="fas fa-video"></i><span>Video Courses</span>
             </a>
             <a href="#" class="sidebar-link rbac-admin-only" onclick="showSection('admin')" style="color:#ef4444" id="admin-panel-link">
                 <i class="fas fa-user-shield"></i><span>Admin Panel</span>
@@ -681,214 +681,61 @@
             </div>
         </section>
 
-        <!-- ========== SECTION: COURSES LMS ========== -->
+        <!-- ========== SECTION: VIDEO COURSES ========== -->
         <section id="section-courses" class="dash-section">
-
-            <!-- Breadcrumb -->
-            <div class="lms-breadcrumb" id="lms-breadcrumb">
-                <span class="lms-bc-item active">Courses</span>
-            </div>
-
-            <!-- ── VIEW 1: LIBRARY ── -->
-            <div id="lms-library-view">
-                <div class="lms-library-header">
-                    <div class="lms-library-header-text">
-                        <h2 class="lms-library-title"><i class="fas fa-graduation-cap"></i> Courses</h2>
-                        <p class="lms-library-sub">Manage your courses, lessons, and educational videos in one place.</p>
+            <div id="courses-library-view">
+                <div class="courses-top-bar">
+                    <div class="courses-search-wrap">
+                        <i class="fas fa-search csw-icon"></i>
+                        <input type="text" id="course-search-input" class="courses-search" placeholder="Search courses by name or category...">
                     </div>
-                    <button class="lms-add-course-btn" id="lms-add-course-btn" onclick="EduAI.Courses.openAddCourseModal()" style="display:none">
-                        <i class="fas fa-plus"></i> Add New Course
+                    <button class="courses-add-btn rbac-admin-only" onclick="EduAI.Courses.openCreateModal()" style="display:none;" id="course-add-btn">
+                        <i class="fas fa-plus"></i> New Course
                     </button>
                 </div>
-                <div class="lms-filter-row">
-                    <div class="lms-search-wrap">
-                        <i class="fas fa-search lms-search-icon"></i>
-                        <input type="text" id="lms-search-input" class="lms-search-input" placeholder="Search courses by name, type, or topic...">
-                    </div>
-                    <div class="lms-filter-pills" id="lms-filter-pills"></div>
+                <div class="courses-filter-tabs" id="courses-filter-tabs">
+                    <button class="cft-pill active" data-cat="all">All Courses</button>
+                    <!-- Categories will be dynamically injected here -->
                 </div>
-                <div class="lms-courses-grid" id="lms-courses-grid"></div>
-            </div>
-
-            <!-- ── VIEW 2: COURSE ROOM ── -->
-            <div id="lms-room-view" style="display:none">
-                <div class="lms-room-header" id="lms-room-header"></div>
-                <div class="lms-modules" id="lms-modules"></div>
-            </div>
-
-            <!-- ── VIEW 3: VIDEO PLAYER ── -->
-            <div id="lms-player-view" style="display:none">
-                <div class="lms-player-layout">
-                    <div class="lms-player-main">
-                        <div class="lms-video-wrap" id="lms-video-wrap">
-                            <div class="lms-no-video"><i class="fas fa-play-circle"></i><p>Select a lesson to begin.</p></div>
-                        </div>
-                        <div class="lms-player-meta">
-                            <h3 class="lms-player-title" id="lms-player-title">Lesson Title</h3>
-                            <p class="lms-player-desc" id="lms-player-desc">Select a video to start learning.</p>
-                            <button class="lms-mark-btn" id="lms-mark-btn"><i class="fas fa-check-circle"></i> Mark as Complete</button>
-                        </div>
-                    </div>
-                    <div class="lms-player-sidebar">
-                        <div class="lms-player-sidebar-hdr"><i class="fas fa-list"></i> Course Contents</div>
-                        <div class="lms-player-sidebar-list" id="lms-player-sidebar-list"></div>
-                    </div>
+                <div class="courses-grid" id="courses-grid">
+                    <!-- Course cards will be injected here -->
                 </div>
             </div>
 
+            <!-- PLAYER VIEW -->
+            <div id="courses-player-view">
+                <button class="cpv-back" onclick="EduAI.Courses.closePlayer()"><i class="fas fa-arrow-left"></i> Back to Library</button>
+                <div class="cpv-prog-bar-wrap">
+                    <div class="cpv-prog-top">
+                        <h2 class="cpv-course-name" id="cpv-course-name">Course Title</h2>
+                        <div class="cpv-prog-count" id="cpv-prog-count">0/0</div>
+                    </div>
+                    <div class="cpv-prog-track"><div class="cpv-prog-fill" id="cpv-prog-fill" style="width:0%"></div></div>
+                </div>
+                <div class="cpv-layout">
+                    <div class="cpv-main-pane">
+                        <div class="cpv-iframe-wrap" id="cpv-iframe-wrap">
+                            <!-- Video iframe -->
+                        </div>
+                        <div class="cpv-video-meta">
+                            <h3 class="cpv-video-title-d" id="cpv-video-title">Video Title</h3>
+                            <p class="cpv-video-desc-d" id="cpv-video-desc">Select a video to start learning.</p>
+                            <button class="cpv-mark-btn" id="cpv-mark-btn" disabled><i class="fas fa-check-circle"></i> Mark as Completed</button>
+                        </div>
+                    </div>
+                    <div class="cpv-playlist">
+                        <div class="cpv-playlist-hdr">
+                            <i class="fas fa-list"></i> Course Modules
+                        </div>
+                        <div class="cpv-playlist-body" id="cpv-playlist-body">
+                            <!-- Playlist items -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
     </main>
-
-    <!-- ========== LMS: ADD / EDIT COURSE MODAL ========== -->
-    <div class="lms-modal-overlay" id="lms-course-modal-overlay" onclick="if(event.target===this)EduAI.Courses.closeCourseModal()">
-        <div class="lms-modal" id="lms-course-modal">
-            <div class="lms-modal-hdr">
-                <div class="lms-modal-ico"><i class="fas fa-graduation-cap"></i></div>
-                <div>
-                    <div class="lms-modal-title" id="lms-cmodal-title">Add New Course</div>
-                    <div class="lms-modal-sub">Fill in the details to create a new course room.</div>
-                </div>
-                <button class="lms-modal-close" onclick="EduAI.Courses.closeCourseModal()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="lms-modal-body">
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-heading"></i> Course Name *</label>
-                    <input type="text" id="lms-cmodal-name" class="lms-input" placeholder="e.g. C++ Programming Masterclass">
-                </div>
-                <div class="lms-field-row">
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="fas fa-tag"></i> Category / Type</label>
-                        <select id="lms-cmodal-cat" class="lms-input">
-                            <option>Programming</option>
-                            <option>Database</option>
-                            <option>Design</option>
-                            <option>Mathematics</option>
-                            <option>Science</option>
-                            <option>Medicine</option>
-                            <option>Engineering</option>
-                            <option>Business</option>
-                            <option>Language</option>
-                            <option>General</option>
-                        </select>
-                    </div>
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="fas fa-toggle-on"></i> Status</label>
-                        <select id="lms-cmodal-status" class="lms-input">
-                            <option value="published">Published</option>
-                            <option value="draft">Draft</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-align-left"></i> Description</label>
-                    <textarea id="lms-cmodal-desc" class="lms-input lms-textarea" placeholder="Brief description of this course..."></textarea>
-                </div>
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-image"></i> Thumbnail URL <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-                    <input type="url" id="lms-cmodal-thumbnail" class="lms-input" placeholder="https://example.com/image.jpg">
-                </div>
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-icons"></i> Course Icon</label>
-                    <div class="lms-icon-picker" id="lms-cmodal-icons">
-                        <button class="lms-icon-opt selected" data-icon="fa-graduation-cap" title="Graduation Cap"><i class="fas fa-graduation-cap"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-code" title="Code"><i class="fas fa-code"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-database" title="Database"><i class="fas fa-database"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-paint-brush" title="Design"><i class="fas fa-paint-brush"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-flask" title="Science"><i class="fas fa-flask"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-calculator" title="Math"><i class="fas fa-calculator"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-laptop-code" title="Dev"><i class="fas fa-laptop-code"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-brain" title="AI"><i class="fas fa-brain"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-globe" title="Web"><i class="fas fa-globe"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-server" title="Server"><i class="fas fa-server"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-shield-alt" title="Security"><i class="fas fa-shield-alt"></i></button>
-                        <button class="lms-icon-opt" data-icon="fa-chart-bar" title="Analytics"><i class="fas fa-chart-bar"></i></button>
-                    </div>
-                </div>
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-palette"></i> Accent Color</label>
-                    <div class="lms-color-picker" id="lms-cmodal-colors">
-                        <div class="lms-color-swatch selected" data-color="#6c63ff" style="background:#6c63ff"></div>
-                        <div class="lms-color-swatch" data-color="#10b981" style="background:#10b981"></div>
-                        <div class="lms-color-swatch" data-color="#ec4899" style="background:#ec4899"></div>
-                        <div class="lms-color-swatch" data-color="#f7931e" style="background:#f7931e"></div>
-                        <div class="lms-color-swatch" data-color="#3b82f6" style="background:#3b82f6"></div>
-                        <div class="lms-color-swatch" data-color="#8b5cf6" style="background:#8b5cf6"></div>
-                        <div class="lms-color-swatch" data-color="#ef4444" style="background:#ef4444"></div>
-                        <div class="lms-color-swatch" data-color="#06b6d4" style="background:#06b6d4"></div>
-                        <div class="lms-color-swatch" data-color="#a855f7" style="background:#a855f7"></div>
-                        <div class="lms-color-swatch" data-color="#22c55e" style="background:#22c55e"></div>
-                        <div class="lms-color-swatch" data-color="#f59e0b" style="background:#f59e0b"></div>
-                        <div class="lms-color-swatch" data-color="#6366f1" style="background:#6366f1"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="lms-modal-footer">
-                <button class="lms-btn-ghost" onclick="EduAI.Courses.closeCourseModal()">Cancel</button>
-                <button class="lms-btn-primary" onclick="EduAI.Courses.saveCourse()"><i class="fas fa-check"></i> Save Course</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========== LMS: ADD / EDIT LESSON MODAL ========== -->
-    <div class="lms-modal-overlay" id="lms-video-modal-overlay" onclick="if(event.target===this)EduAI.Courses.closeVideoModal()">
-        <div class="lms-modal lms-modal-wide" id="lms-video-modal">
-            <div class="lms-modal-hdr">
-                <div class="lms-modal-ico" style="background:linear-gradient(135deg,#10b981,#06b6d4)"><i class="fas fa-play-circle"></i></div>
-                <div>
-                    <div class="lms-modal-title" id="lms-vmodal-title">Add New Lesson</div>
-                    <div class="lms-modal-sub">Add a video lesson to this course module.</div>
-                </div>
-                <button class="lms-modal-close" onclick="EduAI.Courses.closeVideoModal()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="lms-modal-body">
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-heading"></i> Lesson Title *</label>
-                    <input type="text" id="lms-vmodal-ltitle" class="lms-input" placeholder="e.g. Introduction to Variables">
-                </div>
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-link"></i> Video URL *</label>
-                    <input type="url" id="lms-vmodal-url" class="lms-input" placeholder="YouTube URL or direct .mp4 URL">
-                    <div class="lms-vtype-badge" id="lms-vmodal-type-badge"><i class="fas fa-video"></i> Enter a URL above</div>
-                </div>
-                <div class="lms-field-row">
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="fas fa-layer-group"></i> Module</label>
-                        <select id="lms-vmodal-module" class="lms-input"></select>
-                    </div>
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="fas fa-list-ol"></i> Lesson Number</label>
-                        <input type="number" id="lms-vmodal-lessonnum" class="lms-input" placeholder="e.g. 1" min="1">
-                    </div>
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="far fa-clock"></i> Duration</label>
-                        <input type="text" id="lms-vmodal-dur" class="lms-input" placeholder="e.g. 18:32">
-                    </div>
-                </div>
-                <div class="lms-field">
-                    <label class="lms-label"><i class="fas fa-align-left"></i> Description</label>
-                    <textarea id="lms-vmodal-desc" class="lms-input lms-textarea" placeholder="What will students learn in this lesson?"></textarea>
-                </div>
-                <div class="lms-field-row">
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="fas fa-image"></i> Thumbnail URL <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-                        <input type="url" id="lms-vmodal-thumbnail" class="lms-input" placeholder="https://...">
-                    </div>
-                    <div class="lms-field">
-                        <label class="lms-label"><i class="fas fa-toggle-on"></i> Status</label>
-                        <select id="lms-vmodal-status" class="lms-input">
-                            <option value="published">Published</option>
-                            <option value="draft">Draft</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="lms-modal-footer">
-                <button class="lms-btn-ghost" onclick="EduAI.Courses.closeVideoModal()">Cancel</button>
-                <button class="lms-btn-primary" style="background:linear-gradient(135deg,#10b981,#06b6d4)" onclick="EduAI.Courses.saveLesson()"><i class="fas fa-check"></i> Save Lesson</button>
-            </div>
-        </div>
-    </div>
 
     <!-- ========== SPECIFY QUESTION TYPE MODAL ========== -->
     <div class="sqt-overlay" id="sqt-overlay" onclick="closeSqtModal(event)">
