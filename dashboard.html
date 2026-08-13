@@ -43,8 +43,8 @@
                 <i class="fas fa-sliders-h"></i><span>Specify Question Type</span>
                 <span class="sidebar-link-badge">NEW</span>
             </a>
-            <a href="#" class="sidebar-link" id="nav-courses" onclick="showSection('courses')">
-                <i class="fas fa-video"></i><span>Video Courses</span>
+            <a href="#" class="sidebar-link sidebar-link-courses" id="nav-courses" onclick="showSection('courses')">
+                <i class="fas fa-graduation-cap"></i><span>Courses</span>
             </a>
             <a href="#" class="sidebar-link rbac-admin-only" onclick="showSection('admin')" style="color:#ef4444" id="admin-panel-link">
                 <i class="fas fa-user-shield"></i><span>Admin Panel</span>
@@ -689,7 +689,7 @@
                         <i class="fas fa-search csw-icon"></i>
                         <input type="text" id="course-search-input" class="courses-search" placeholder="Search courses by name or category...">
                     </div>
-                    <button class="courses-add-btn" onclick="EduAI.Courses.openCreateModal()" style="display:none !important;" id="course-add-btn">
+                    <button class="courses-add-btn" onclick="EduAI.Courses.openCreateModal()" style="display:none" id="course-add-btn">
                         <i class="fas fa-plus"></i> New Course
                     </button>
                 </div>
@@ -719,8 +719,15 @@
                         </div>
                         <div class="cpv-video-meta">
                             <h3 class="cpv-video-title-d" id="cpv-video-title">Video Title</h3>
-                            <p class="cpv-video-desc-d" id="cpv-video-desc">Select a video to start learning.</p>
+                            <p class="cpv-video-desc-d" id="cpv-video-desc">Select a lesson to start learning.</p>
+                        </div>
+                        <div class="cpv-resources" id="cpv-resources">
+                            <!-- Lesson resources (Video + PDF cards) injected here -->
+                        </div>
+                        <div class="cpv-nav-row">
+                            <button class="cpv-nav-btn cpv-prev-btn" id="cpv-prev-btn" onclick="EduAI.Courses.prevLesson()"><i class="fas fa-arrow-left"></i> Previous Lesson</button>
                             <button class="cpv-mark-btn" id="cpv-mark-btn" disabled><i class="fas fa-check-circle"></i> Mark as Completed</button>
+                            <button class="cpv-nav-btn cpv-next-btn" id="cpv-next-btn" onclick="EduAI.Courses.nextLesson()">Next Lesson <i class="fas fa-arrow-right"></i></button>
                         </div>
                     </div>
                     <div class="cpv-playlist">
@@ -1074,7 +1081,7 @@
             'learning-path': ['Learning Path', 'Your AI-generated personalized curriculum'],
             'achievements': ['Achievements', 'Your badges and milestones'],
             'leaderboard': ['Leaderboard', 'See how you rank among learners'],
-            'courses': ['Video Courses', 'Enhance your skills with professional courses'],
+            'courses': ['Courses', 'Enhance your skills with professional video courses'],
             'admin': ['Admin Panel', '🛡️ Full platform control — restricted to administrators']
         };
         const [title, subtitle] = titles[id] || ['Dashboard', ''];
@@ -1297,13 +1304,13 @@
     </script>
 
     <!-- ========== COURSE CREATOR MODAL (hidden) ========== -->
-    <div class="cc-overlay" id="cc-overlay" style="display:none !important;">
+    <div class="cc-overlay" id="cc-overlay">
         <div class="cc-modal">
             <div class="cc-modal-hdr">
-                <div class="cc-modal-ico"><i class="fas fa-film"></i></div>
+                <div class="cc-modal-ico"><i class="fas fa-graduation-cap"></i></div>
                 <div class="cc-modal-hdr-text">
                     <h2 class="cc-title-text" id="cc-modal-title">Create New Course</h2>
-                    <p class="cc-sub-text" id="cc-modal-sub">Add videos, set categories, and manage the curriculum.</p>
+                    <p class="cc-sub-text" id="cc-modal-sub">Add lessons with a video and a PDF, then manage the curriculum.</p>
                 </div>
                 <button class="cc-close-btn" onclick="EduAI.Courses.closeModal()"><i class="fas fa-times"></i></button>
             </div>
@@ -1343,11 +1350,11 @@
             </div>
 
             <div class="cc-vid-hdr">
-                <label class="cc-lbl">Video Curriculum</label>
-                <button class="cc-add-vid-btn" onclick="EduAI.Courses.addVideoRow()"><i class="fas fa-plus"></i> Add Video</button>
+                <label class="cc-lbl">Lessons</label>
+                <button class="cc-add-vid-btn" onclick="EduAI.Courses.addLessonRow()"><i class="fas fa-plus"></i> Add Lesson</button>
             </div>
             <div class="cc-vid-list" id="cc-vid-list">
-                <!-- Video rows injected here -->
+                <!-- Lesson rows injected here -->
             </div>
 
             <button class="cc-submit" onclick="EduAI.Courses.saveCourse()"><i class="fas fa-save"></i> Save Course</button>
