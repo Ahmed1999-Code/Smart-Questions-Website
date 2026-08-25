@@ -341,6 +341,7 @@ window.EduAI = {
 
     function _isAdmin()   { return _getRole() === 'admin';   }
     function _isTeacher() { return _getRole() === 'teacher'; }
+    function _isManager() { return _getRole() === 'manager'; }
     function _isStudent() { return _getRole() === 'student'; }
 
     // ── Route guard ───────────────────────────────────────────
@@ -369,7 +370,13 @@ window.EduAI = {
         // Items only teachers & admins can see
         const teacherItems = document.querySelectorAll('.rbac-teacher-only');
         teacherItems.forEach(el => {
-            el.style.display = (role === 'admin' || role === 'teacher') ? '' : 'none';
+            el.style.display = (role === 'admin' || role === 'teacher' || role === 'manager') ? '' : 'none';
+        });
+
+        // Items only managers & admins can see
+        const managerItems = document.querySelectorAll('.rbac-manager-only');
+        managerItems.forEach(el => {
+            el.style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
         });
 
         // Items only admins can see
@@ -381,7 +388,7 @@ window.EduAI = {
         // Stamp a role badge on the sidebar user area
         const levelEl = document.getElementById('user-level-mini');
         if (levelEl) {
-            const roleLabels = { admin: '🛡️ Admin', teacher: '📚 Teacher', student: '🎓 Student' };
+            const roleLabels = { admin: '🛡️ Admin', manager: '📋 Manager', teacher: '📚 Teacher', student: '🎓 Student' };
             levelEl.textContent = roleLabels[role] || 'Student';
         }
     }
@@ -423,6 +430,13 @@ window.EduAI = {
                     <div class="stat-widget-data">
                         <span class="sw-num" id="admin-teacher-count">0</span>
                         <span class="sw-label">Teachers</span>
+                    </div>
+                </div>
+                <div class="stat-widget">
+                    <div class="stat-widget-icon" style="background:linear-gradient(135deg,#f7931e,#f59e0b)"><i class="fas fa-user-tie"></i></div>
+                    <div class="stat-widget-data">
+                        <span class="sw-num" id="admin-manager-count">0</span>
+                        <span class="sw-label">Managers</span>
                     </div>
                 </div>
                 <div class="stat-widget">
@@ -498,12 +512,14 @@ window.EduAI = {
             const users = this.getAllUsers();
             const students = users.filter(u => (u.role || 'student') === 'student').length;
             const teachers = users.filter(u => u.role === 'teacher').length;
+            const managers = users.filter(u => u.role === 'manager').length;
             const admins   = users.filter(u => u.role === 'admin').length;
 
             const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
             setEl('admin-total-users',   users.length);
             setEl('admin-student-count', students);
             setEl('admin-teacher-count', teachers);
+            setEl('admin-manager-count', managers);
             setEl('admin-admin-count',   admins);
 
             const tbody = document.getElementById('admin-users-tbody');
@@ -512,6 +528,7 @@ window.EduAI = {
             const roleBadge = role => {
                 const map = {
                     admin:   { color:'#a855f7', icon:'fa-user-shield',          label:'Admin'   },
+                    manager: { color:'#f7931e', icon:'fa-user-tie',             label:'Manager' },
                     teacher: { color:'#f7931e', icon:'fa-chalkboard-teacher',   label:'Teacher' },
                     student: { color:'#6c63ff', icon:'fa-user-graduate',        label:'Student' },
                 };
@@ -559,7 +576,7 @@ window.EduAI = {
         },
 
         changeRole(email, currentRole) {
-            const roles = ['student', 'teacher', 'admin'];
+            const roles = ['student', 'teacher', 'manager', 'admin'];
             const next = roles[(roles.indexOf(currentRole) + 1) % roles.length];
             if (!confirm(`Change ${email}'s role from ${currentRole} → ${next}?`)) return;
             let users = this.getAllUsers();
@@ -632,6 +649,7 @@ window.EduAI = {
         getRole:          _getRole,
         isAdmin:          _isAdmin,
         isTeacher:        _isTeacher,
+        isManager:        _isManager,
         isStudent:        _isStudent,
         enforceAccess:    enforceAccess,
         applyDashboardNav: applyDashboardNav,
