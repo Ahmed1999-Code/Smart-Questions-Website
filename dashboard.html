@@ -681,65 +681,48 @@
             </div>
         </section>
 
-        <!-- ========== SECTION: VIDEO COURSES ========== -->
+        <!-- ========== SECTION: COURSES ========== -->
         <section id="section-courses" class="dash-section">
-            <div id="courses-library-view">
-                <div class="courses-top-bar">
-                    <div class="courses-search-wrap">
-                        <i class="fas fa-search csw-icon"></i>
-                        <input type="text" id="course-search-input" class="courses-search" placeholder="Search courses by name or category...">
-                    </div>
-                    <button class="courses-add-btn" onclick="EduAI.Courses.openCreateModal()" style="display:none" id="course-add-btn">
-                        <i class="fas fa-plus"></i> New Course
-                    </button>
+            <!-- Top bar (search + filters + add button) -->
+            <div class="courses-top-bar">
+                <div class="courses-search-wrap">
+                    <i class="fas fa-search csw-icon"></i>
+                    <input type="text" id="course-search-input" class="courses-search" placeholder="Search courses...">
                 </div>
-                <div class="courses-filter-tabs" id="courses-filter-tabs">
-                    <button class="cft-pill active" data-cat="all">All Courses</button>
-                    <!-- Categories will be dynamically injected here -->
-                </div>
-                <div class="courses-grid" id="courses-grid">
-                    <!-- Course cards will be injected here -->
-                </div>
+                <select id="course-sort-select" class="courses-sort-sel">
+                    <option value="updated">Recently Updated</option>
+                    <option value="created">Newest</option>
+                    <option value="title">Title A-Z</option>
+                </select>
+                <select id="course-filter-status" class="courses-sort-sel" style="display:none">
+                    <option value="all">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                    <option value="deleted">Deleted</option>
+                </select>
+                <select id="course-filter-cat" class="courses-sort-sel">
+                    <option value="all">All Categories</option>
+                </select>
+                <select id="course-filter-level" class="courses-sort-sel">
+                    <option value="all">All Levels</option>
+                </select>
+                <button class="courses-add-btn" id="course-add-btn" style="display:none" onclick="EduAI.Courses.openCreateModal()">
+                    <i class="fas fa-plus"></i> New Course
+                </button>
             </div>
+            <div class="courses-filter-tabs" id="courses-filter-tabs"></div>
 
-            <!-- PLAYER VIEW -->
-            <div id="courses-player-view">
-                <button class="cpv-back" onclick="EduAI.Courses.closePlayer()"><i class="fas fa-arrow-left"></i> Back to Library</button>
-                <div class="cpv-prog-bar-wrap">
-                    <div class="cpv-prog-top">
-                        <h2 class="cpv-course-name" id="cpv-course-name">Course Title</h2>
-                        <div class="cpv-prog-count" id="cpv-prog-count">0/0</div>
-                    </div>
-                    <div class="cpv-prog-track"><div class="cpv-prog-fill" id="cpv-prog-fill" style="width:0%"></div></div>
-                </div>
-                <div class="cpv-layout">
-                    <div class="cpv-main-pane">
-                        <div class="cpv-iframe-wrap" id="cpv-iframe-wrap">
-                            <!-- Video iframe -->
-                        </div>
-                        <div class="cpv-video-meta">
-                            <h3 class="cpv-video-title-d" id="cpv-video-title">Video Title</h3>
-                            <p class="cpv-video-desc-d" id="cpv-video-desc">Select a lesson to start learning.</p>
-                        </div>
-                        <div class="cpv-resources" id="cpv-resources">
-                            <!-- Lesson resources (Video + PDF cards) injected here -->
-                        </div>
-                        <div class="cpv-nav-row">
-                            <button class="cpv-nav-btn cpv-prev-btn" id="cpv-prev-btn" onclick="EduAI.Courses.prevLesson()"><i class="fas fa-arrow-left"></i> Previous Lesson</button>
-                            <button class="cpv-mark-btn" id="cpv-mark-btn" disabled><i class="fas fa-check-circle"></i> Mark as Completed</button>
-                            <button class="cpv-nav-btn cpv-next-btn" id="cpv-next-btn" onclick="EduAI.Courses.nextLesson()">Next Lesson <i class="fas fa-arrow-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="cpv-playlist">
-                        <div class="cpv-playlist-hdr">
-                            <i class="fas fa-list"></i> Course Modules
-                        </div>
-                        <div class="cpv-playlist-body" id="cpv-playlist-body">
-                            <!-- Playlist items -->
-                        </div>
-                    </div>
-                </div>
+            <!-- View containers (toggled by _showView) -->
+            <div id="courses-catalog-view" style="display:block">
+                <div class="courses-grid" id="courses-grid"></div>
             </div>
+            <div id="courses-detail-view" style="display:none"></div>
+            <div id="courses-player-view" style="display:none"></div>
+            <div id="courses-builder-view" style="display:none"></div>
+
+            <!-- Shared modal overlay for lesson editor / permissions / analytics / audit / course edit / create -->
+            <div id="courses-modal-overlay" class="courses-modal-overlay" onclick="EduAI.Courses._closeModal()"></div>
         </section>
 
     </main>
@@ -1303,62 +1286,6 @@
     }
     </script>
 
-    <!-- ========== COURSE CREATOR MODAL (hidden) ========== -->
-    <div class="cc-overlay" id="cc-overlay">
-        <div class="cc-modal">
-            <div class="cc-modal-hdr">
-                <div class="cc-modal-ico"><i class="fas fa-graduation-cap"></i></div>
-                <div class="cc-modal-hdr-text">
-                    <h2 class="cc-title-text" id="cc-modal-title">Create New Course</h2>
-                    <p class="cc-sub-text" id="cc-modal-sub">Add lessons with a video and a PDF, then manage the curriculum.</p>
-                </div>
-                <button class="cc-close-btn" onclick="EduAI.Courses.closeModal()"><i class="fas fa-times"></i></button>
-            </div>
 
-            <div class="cc-field">
-                <label class="cc-lbl">Course Name</label>
-                <input type="text" id="cc-course-name" class="cc-inp" placeholder="e.g. Advanced JavaScript Mastery">
-            </div>
-
-            <div class="cc-field">
-                <label class="cc-lbl">Description</label>
-                <textarea id="cc-course-desc" class="cc-ta" placeholder="Briefly explain what this course covers..."></textarea>
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                <div class="cc-field">
-                    <label class="cc-lbl">Category</label>
-                    <select id="cc-course-cat" class="cc-sel">
-                        <option value="Programming">Programming</option>
-                        <option value="Design">Design</option>
-                        <option value="Business">Business</option>
-                        <option value="Languages">Languages</option>
-                        <option value="Sciences">Sciences</option>
-                        <option value="Arts">Arts</option>
-                    </select>
-                </div>
-                <div class="cc-field">
-                    <label class="cc-lbl">Theme Color</label>
-                    <div class="cc-swatches" id="cc-theme-swatches">
-                        <div class="cc-swatch picked" style="background:#6c63ff" data-c="#6c63ff"></div>
-                        <div class="cc-swatch" style="background:#ef4444" data-c="#ef4444"></div>
-                        <div class="cc-swatch" style="background:#10b981" data-c="#10b981"></div>
-                        <div class="cc-swatch" style="background:#f59e0b" data-c="#f59e0b"></div>
-                        <div class="cc-swatch" style="background:#ec4899" data-c="#ec4899"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="cc-vid-hdr">
-                <label class="cc-lbl">Lessons</label>
-                <button class="cc-add-vid-btn" onclick="EduAI.Courses.addLessonRow()"><i class="fas fa-plus"></i> Add Lesson</button>
-            </div>
-            <div class="cc-vid-list" id="cc-vid-list">
-                <!-- Lesson rows injected here -->
-            </div>
-
-            <button class="cc-submit" onclick="EduAI.Courses.saveCourse()"><i class="fas fa-save"></i> Save Course</button>
-        </div>
-    </div>
 </body>
 </html>

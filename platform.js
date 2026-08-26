@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    PLATFORM.JS — EduAI Pro Shared Utilities
    ============================================================ */
 
@@ -1111,30 +1111,80 @@ ADVANCED CAPABILITIES:
         });
     }
 
-    // ── Courses System ─────────────────────────────────────────
-    const COURSES_DB_KEY = 'eduai_courses_db';
-    const COURSE_PROG_PREFIX = 'eduai_prog_';
+        // ── Courses System (Enhanced) ──────────────────────────────
 
+    // ── Constants ─────────────────────────────────────────────
+    const COURSES_DB_KEY = 'eduai_courses_db';
+    const COURSE_AUDIT_KEY = 'eduai_course_audit';
+    const COURSE_PERMS_KEY = 'eduai_course_perms';
+    const COURSE_ANALYTICS_KEY = 'eduai_course_analytics';
+    const COURSE_PROG_PREFIX = 'eduai_prog_';
+    const COURSE_STATUSES = { DRAFT:'draft', PUBLISHED:'published', ARCHIVED:'archived' };
+    const COURSE_VISIBILITY = { PRIVATE:'private', STUDENTS:'students', PUBLIC:'public' };
+    const COURSE_PERMISSIONS = ['courses.create','courses.read','courses.update','courses.delete','courses.publish','courses.upload','courses.manage_lessons','courses.manage_modules','courses.manage_downloads','courses.view_analytics'];
+    const COURSE_CATEGORIES = ['Programming','Design','Business','Languages','Sciences','Arts','Engineering','Medicine','Mathematics','Law','Other'];
+    const COURSE_LEVELS = ['Beginner','Intermediate','Advanced','Expert'];
+    const COURSE_LANGUAGES = ['English','Arabic','French','Spanish','Other'];
+
+    // ── State ─────────────────────────────────────────────────
     let _coursesCache = [];
     let _activeCourseId = null;
     let _activeLessonId = null;
-    let _courseEditingId = null; // null = new, string = edit
-    let _lessonCounter = 0;
+    let _courseEditingId = null;
+    let _courseView = 'catalog';
+    let _builderModuleExpanded = {};
+    let _courseSearchQ = '';
+    let _courseSortBy = 'updated';
+    let _courseFilterStatus = 'all';
+    let _courseFilterCat = 'all';
+    let _courseFilterLevel = 'all';
+    let _coursePage = 1;
+    const _coursePageSize = 12;
+    let _progressTimers = {};
 
-    // Migrate legacy `videos[]` data → `lessons[]` (each lesson = Video + PDF).
-    // Preserves existing lesson/video ids so stored progress is not lost.
-    function _migrateCourse(c) {
+    // ── Utilities ─────────────────────────────────────────────
+    function _genId(prefix) { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+    function _slugify(t) { return (t||'').toLowerCase().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim() || 'untitled'; }
+    function _escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function _calcDuration(modules) {
+        let s=0; if(!modules)return'0m';
+        modules.forEach(m=>(m.lessons||[]).forEach(l=>{
+            if(l.duration){const p=l.duration.split(':');if(p.length===2)s+=parseInt(p[0])*60+parseInt(p[1]);else if(p.length===3)s+=parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]);}
+        }));
+        const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?h+'h '+m+'m':m+'m';
+    }
+    function _countLessons(modules){let c=0;if(modules)modules.forEach(m=>{c+=(m.lessons||[]).length;});return c;}
+    function _countResources(modules){let c=0;if(modules)modules.forEach(m=>(m.lessons||[]).forEach(l=>{c+=(l.resources||[]).length;}));return c;}
+
+    // ── Migration (legacy → modules) ──────────────────────────
+    function _migrateCourseV2(c) {
         if (!c) return c;
-        if (!c.lessons && Array.isArray(c.videos)) {
-            c.lessons = c.videos.map(v => ({
-                id: v.id || ('l_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                title: v.title || 'Untitled Lesson',
-                video: { url: v.url || '', dur: v.dur || '10:00' },
-                pdf: { title: (v.title || 'Lesson') + ' — Notes', url: '' }
-            }));
-            delete c.videos;
+        if (!c.modules && Array.isArray(c.lessons)) {
+            c.modules = [{ id:_genId('mod'), title:'Module 1', position:0,
+                lessons: c.lessons.map((l,i) => ({
+                    id: l.id||_genId('les'), title:l.title||'Untitled', description:'', position:i,
+                    duration: (l.video&&l.video.dur)||'10:00',
+                    videoSource: { type:'youtube', url:(l.video&&l.video.url)||'', videoId:'' },
+                    resources: (l.pdf&&l.pdf.url)?[{id:_genId('res'),title:l.pdf.title||'Lesson Notes',type:'pdf',url:l.pdf.url,downloadEnabled:true}]:[],
+                    published:true, createdAt:c.createdAt||new Date().toISOString(), updatedAt:c.updatedAt||new Date().toISOString()
+                }))
+            }];
+            delete c.lessons;
         }
-        if (!Array.isArray(c.lessons)) c.lessons = [];
+        if (!c.slug) c.slug = _slugify(c.title);
+        if (!c.status) c.status = COURSE_STATUSES.DRAFT;
+        if (!c.visibility) c.visibility = COURSE_VISIBILITY.PRIVATE;
+        if (c.downloadEnabled===undefined) c.downloadEnabled = false;
+        if (!c.modules) c.modules = [];
+        if (!c.createdAt) c.createdAt = new Date().toISOString();
+        if (!c.updatedAt) c.updatedAt = new Date().toISOString();
+        if (!c.level) c.level = 'Beginner';
+        if (!c.language) c.language = 'English';
+        if (!c.instructor) c.instructor = 'EduAI Pro';
+        if (!c.category) c.category = 'Other';
+        if (!c.shortDescription) c.shortDescription = c.desc || '';
+        if (!c.description) c.description = c.desc || '';
+        if (!c.thumbnail) c.thumbnail = '';
         return c;
     }
 
@@ -1143,514 +1193,1134 @@ ADVANCED CAPABILITIES:
         if (d) {
             try { _coursesCache = JSON.parse(d); } catch(e) { _coursesCache = []; }
             if (!Array.isArray(_coursesCache)) _coursesCache = [];
-            _coursesCache = _coursesCache.map(_migrateCourse).filter(Boolean);
-            _saveCourses();
-            return;
+            _coursesCache = _coursesCache.map(_migrateCourseV2).filter(c => !c.deletedAt);
+            _saveCourses(); return;
         }
-        // Default sample courses
         _coursesCache = [
-            {
-                id: 'c_' + Date.now() + '1',
-                title: 'Advanced JavaScript Mastery',
-                desc: 'Master closures, async/await, and design patterns.',
-                cat: 'Programming', color: '#6c63ff',
-                lessons: [
-                    { id: 'v1', title: 'Intro to Closures',
-                      video: { url: 'https://www.youtube.com/embed/vKJpN5FAeF4', dur: '10:45' },
-                      pdf: { title: 'Intro to Closures — Notes', url: '' } },
-                    { id: 'v2', title: 'Async & Await',
-                      video: { url: 'https://www.youtube.com/embed/vn3tm0quoqE', dur: '15:20' },
-                      pdf: { title: 'Async & Await — Notes', url: '' } }
-                ]
+            { id:'c_'+Date.now()+'1', slug:'advanced-javascript-mastery', title:'Advanced JavaScript Mastery',
+              shortDescription:'Master closures, async/await, and design patterns.',
+              description:'A comprehensive course covering advanced JavaScript concepts.',
+              thumbnail:'', instructor:'EduAI Pro', category:'Programming', level:'Intermediate',
+              language:'English', status:'published', visibility:'students', downloadEnabled:false,
+              createdBy:'system', updatedBy:'system', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(),
+              publishedAt:new Date().toISOString(), deletedAt:null, color:'#6c63ff',
+              modules:[{id:'mod_c1_1',title:'Closures & Scope',position:0,lessons:[
+                  {id:'les_c1_1',title:'Introduction to Closures',description:'Learn what closures are.',position:0,duration:'10:45',
+                   videoSource:{type:'youtube',url:'https://www.youtube.com/embed/vKJpN5FAeF4',videoId:'vKJpN5FAeF4'},
+                   resources:[{id:'res_c1_1',title:'Closures Notes',type:'pdf',url:'',downloadEnabled:true}],
+                   published:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+                  {id:'les_c1_2',title:'Closures in Practice',description:'Real-world closure patterns.',position:1,duration:'12:30',
+                   videoSource:{type:'youtube',url:'https://www.youtube.com/embed/vn3tm0quoqE',videoId:'vn3tm0quoqE'},
+                   resources:[{id:'res_c1_2',title:'Practice Exercises',type:'pdf',url:'',downloadEnabled:true}],
+                   published:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}
+              ]},{id:'mod_c1_2',title:'Async/Await Patterns',position:1,lessons:[
+                  {id:'les_c1_3',title:'Promises Deep Dive',description:'Understanding promises.',position:0,duration:'15:20',
+                   videoSource:{type:'youtube',url:'https://www.youtube.com/embed/vn3tm0quoqE',videoId:'vn3tm0quoqE'},
+                   resources:[],published:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}
+              ]}]
             },
-            {
-                id: 'c_' + Date.now() + '2',
-                title: 'UI/UX Fundamentals',
-                desc: 'Learn spacing, typography, and color theory.',
-                cat: 'Design', color: '#ec4899',
-                lessons: [
-                    { id: 'v3', title: 'Color Theory',
-                      video: { url: 'https://www.youtube.com/embed/xYXhB2o-x0k', dur: '08:30' },
-                      pdf: { title: 'Color Theory — Notes', url: '' } }
-                ]
+            { id:'c_'+Date.now()+'2', slug:'ui-ux-fundamentals', title:'UI/UX Fundamentals',
+              shortDescription:'Learn spacing, typography, and color theory.',
+              description:'Build a strong foundation in UI/UX design principles.',
+              thumbnail:'', instructor:'EduAI Pro', category:'Design', level:'Beginner',
+              language:'English', status:'published', visibility:'students', downloadEnabled:false,
+              createdBy:'system', updatedBy:'system', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(),
+              publishedAt:new Date().toISOString(), deletedAt:null, color:'#ec4899',
+              modules:[{id:'mod_c2_1',title:'Color Theory',position:0,lessons:[
+                  {id:'les_c2_1',title:'Color Theory Basics',description:'Understanding color relationships.',position:0,duration:'08:30',
+                   videoSource:{type:'youtube',url:'https://www.youtube.com/embed/xYXhB2o-x0k',videoId:'xYXhB2o-x0k'},
+                   resources:[],published:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}
+              ]}]
             }
         ];
         _saveCourses();
     }
-    function _saveCourses() { localStorage.setItem(COURSES_DB_KEY, JSON.stringify(_coursesCache)); }
+    function _saveCourses() { try{localStorage.setItem(COURSES_DB_KEY,JSON.stringify(_coursesCache));}catch(e){} }
 
-    function _getProg(courseId) {
-        const email = EduAI.RBAC.getUser().email;
-        if (!email) return [];
-        const raw = localStorage.getItem(COURSE_PROG_PREFIX + email + '_' + courseId);
-        return raw ? JSON.parse(raw) : [];
+    // ── Course Store ──────────────────────────────────────────
+    const _courseStore = {
+        getAll(includeDeleted){ return includeDeleted ? _coursesCache : _coursesCache.filter(c=>!c.deletedAt); },
+        getById(id){ return _coursesCache.find(c=>c.id===id); },
+        getBySlug(slug){ return _coursesCache.find(c=>c.slug===slug&&!c.deletedAt); },
+        getPublished(){ return _coursesCache.filter(c=>c.status==='published'&&c.visibility!=='private'&&!c.deletedAt); },
+        getStudentVisible(){
+            return _coursesCache.filter(c=>{
+                if(c.deletedAt||c.status!=='published') return false;
+                if(c.visibility==='private') return false;
+                return true;
+            });
+        },
+        create(data){
+            const user=EduAI.RBAC.getUser();
+            const c={ id:_genId('course'), slug:_slugify(data.title), title:data.title||'Untitled',
+                shortDescription:data.shortDescription||'', description:data.description||'',
+                thumbnail:data.thumbnail||'', instructor:data.instructor||(user?user.name:'Unknown'),
+                category:data.category||'Other', level:data.level||'Beginner',
+                language:data.language||'English', color:data.color||'#6c63ff',
+                status:COURSE_STATUSES.DRAFT, visibility:COURSE_VISIBILITY.PRIVATE,
+                downloadEnabled:false, createdBy:user?user.email:'unknown',
+                updatedBy:user?user.email:'unknown', createdAt:new Date().toISOString(),
+                updatedAt:new Date().toISOString(), publishedAt:null, deletedAt:null, modules:[] };
+            _coursesCache.unshift(c); _saveCourses();
+            _courseAudit.log('course_created',c.id,c.title,{title:c.title});
+            return c;
+        },
+        update(id,data){
+            const c=this.getById(id); if(!c)return null;
+            const user=EduAI.RBAC.getUser();
+            Object.keys(data).forEach(k=>{if(k!=='id'&&k!=='createdBy'&&k!=='createdAt'&&k!=='deletedAt')c[k]=data[k];});
+            c.updatedBy=user?user.email:'unknown'; c.updatedAt=new Date().toISOString();
+            c.slug=_slugify(c.title); _saveCourses(); return c;
+        },
+        softDelete(id){
+            const c=this.getById(id); if(!c)return false;
+            c.deletedAt=new Date().toISOString(); c.updatedBy=(EduAI.RBAC.getUser()||{}).email||'unknown';
+            _saveCourses(); _courseAudit.log('course_deleted',id,c.title,{soft:true}); return true;
+        },
+        restore(id){
+            const c=_coursesCache.find(x=>x.id===id); if(!c)return false;
+            c.deletedAt=null; _saveCourses(); _courseAudit.log('course_restored',id,c.title,{}); return true;
+        },
+        publish(id){
+            const c=this.update(id,{status:COURSE_STATUSES.PUBLISHED,visibility:COURSE_VISIBILITY.STUDENTS,publishedAt:new Date().toISOString()});
+            if(c)_courseAudit.log('course_published',id,c.title,{}); return c;
+        },
+        unpublish(id){
+            const c=this.update(id,{status:COURSE_STATUSES.DRAFT,visibility:COURSE_VISIBILITY.PRIVATE});
+            if(c)_courseAudit.log('course_unpublished',id,c.title,{}); return c;
+        },
+        archive(id){
+            const c=this.update(id,{status:COURSE_STATUSES.ARCHIVED});
+            if(c)_courseAudit.log('course_archived',id,c.title,{}); return c;
+        },
+        duplicate(id){
+            const o=this.getById(id); if(!o)return null;
+            const user=EduAI.RBAC.getUser();
+            const cl=JSON.parse(JSON.stringify(o));
+            cl.id=_genId('course'); cl.slug=_slugify(cl.title+' copy'); cl.title=cl.title+' (Copy)';
+            cl.status=COURSE_STATUSES.DRAFT; cl.visibility=COURSE_VISIBILITY.PRIVATE;
+            cl.createdBy=user?user.email:'unknown'; cl.updatedBy=user?user.email:'unknown';
+            cl.createdAt=new Date().toISOString(); cl.updatedAt=new Date().toISOString();
+            cl.publishedAt=null; cl.deletedAt=null;
+            cl.modules.forEach(m=>{m.id=_genId('mod');m.lessons.forEach(l=>{l.id=_genId('les');(l.resources||[]).forEach(r=>{r.id=_genId('res');});});});
+            _coursesCache.unshift(cl); _saveCourses();
+            _courseAudit.log('course_duplicated',cl.id,cl.title,{originalId:id}); return cl;
+        }
+    };
+
+    // ── Course Authorization ──────────────────────────────────
+    const _courseAuth = {
+        _getPerms(){ try{return JSON.parse(localStorage.getItem(COURSE_PERMS_KEY)||'{}');}catch(e){return {};} },
+        _savePerms(p){ try{localStorage.setItem(COURSE_PERMS_KEY,JSON.stringify(p));}catch(e){} },
+        getManagerPermissions(email){ const p=this._getPerms(); return (p[email]&&p[email].permissions)||[]; },
+        setManagerPermissions(email,perms){ const p=this._getPerms(); p[email]=p[email]||{permissions:[],courseAccess:[]}; p[email].permissions=perms; this._savePerms(p); },
+        getManagerCourseAccess(email){ const p=this._getPerms(); return (p[email]&&p[email].courseAccess)||[]; },
+        setManagerCourseAccess(email,ids){ const p=this._getPerms(); p[email]=p[email]||{permissions:[],courseAccess:[]}; p[email].courseAccess=ids; this._savePerms(p); },
+        _has(email,perm){ return this.getManagerPermissions(email).includes(perm); },
+        _hasAccess(email,cid){ const a=this.getManagerCourseAccess(email); return a.length===0||a.includes(cid); },
+        isManagement(){ return EduAI.RBAC.isAdmin()||EduAI.RBAC.isManager(); },
+        canView(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.read')&&this._hasAccess(u.email,cid); const c=_courseStore.getById(cid); return c&&!c.deletedAt&&c.status==='published'&&c.visibility!=='private'; },
+        canCreate(){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.create'); return false; },
+        canUpdate(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.update')&&this._hasAccess(u.email,cid); return false; },
+        canDelete(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.delete')&&this._hasAccess(u.email,cid); return false; },
+        canPublish(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.publish')&&this._hasAccess(u.email,cid); return false; },
+        canManageLessons(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.manage_lessons')&&this._hasAccess(u.email,cid); return false; },
+        canManageModules(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.manage_modules')&&this._hasAccess(u.email,cid); return false; },
+        canManageDownloads(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.manage_downloads')&&this._hasAccess(u.email,cid); return false; },
+        canViewAnalytics(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.view_analytics')&&this._hasAccess(u.email,cid); return false; },
+        canDownload(cid){ const c=_courseStore.getById(cid); return c&&c.downloadEnabled; },
+        getAllManagers(){ return (JSON.parse(localStorage.getItem('eduai_users')||'[]')).filter(u=>u.role==='manager'); }
+    };
+
+    // ── Audit Log ─────────────────────────────────────────────
+    const _courseAudit = {
+        _read(){ try{return JSON.parse(localStorage.getItem(COURSE_AUDIT_KEY)||'[]');}catch(e){return [];} },
+        _write(d){ try{localStorage.setItem(COURSE_AUDIT_KEY,JSON.stringify(d));}catch(e){} },
+        log(action,courseId,resourceName,details){
+            const user=EduAI.RBAC.getUser(); const log=this._read();
+            log.unshift({ id:_genId('audit'), user:user?user.email:'unknown', userName:user?user.name:'Unknown',
+                role:EduAI.RBAC.getRole(), action, courseId, resourceName, details:details||{}, timestamp:new Date().toISOString() });
+            if(log.length>500)log.length=500; this._write(log);
+        },
+        getForCourse(cid){ return this._read().filter(e=>e.courseId===cid); },
+        getAll(){ return this._read(); },
+        clear(){ this._write([]); }
+    };
+
+    // ── Video Validator ───────────────────────────────────────
+    const _videoValidator = {
+        YT: /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+        parseYT(url){ const m=url.match(this.YT); return m?{type:'youtube',url,videoId:m[1]}:null; },
+        isDirect(url){ return /\.(mp4|webm|ogg)(\?|#|$)/i.test(url); },
+        validate(src){
+            if(!src||!src.url)return{valid:false,error:'No URL provided'};
+            const u=src.url.trim();
+            if(this.parseYT(u))return{valid:true,type:'youtube'};
+            if(this.isDirect(u))return{valid:true,type:'direct'};
+            try{new URL(u);return{valid:true,type:'external'};}catch(e){return{valid:false,error:'Invalid URL format'};}
+        },
+        normalize(src){
+            if(!src)return{type:'external',url:''}; const u=(src.url||'').trim();
+            const yt=this.parseYT(u); if(yt)return yt;
+            if(this.isDirect(u))return{type:'direct',url:u};
+            return{type:'external',url:u};
+        },
+        getEmbedUrl(src){
+            if(!src||!src.url)return''; const n=this.normalize(src);
+            if(n.type==='youtube'){const vid=n.videoId||(n.url.match(this.YT)||[])[1];return vid?'https://www.youtube.com/embed/'+vid:n.url;}
+            return n.url;
+        }
+    };
+
+    // ── Progress Store (debounced) ────────────────────────────
+    const _progressStore = {
+        _key(cid){ const u=EduAI.RBAC.getUser(); return u?COURSE_PROG_PREFIX+u.email+'_'+cid:null; },
+        get(cid){
+            const k=this._key(cid); if(!k)return{completedLessons:[],currentPosition:{},currentLessonId:null,startedAt:null,lastAccessedAt:null};
+            try{const d=JSON.parse(localStorage.getItem(k)||'null');return d||{completedLessons:[],currentPosition:{},currentLessonId:null,startedAt:null,lastAccessedAt:null};}catch(e){return{completedLessons:[],currentPosition:{},currentLessonId:null,startedAt:null,lastAccessedAt:null};}
+        },
+        save(cid,data){ const k=this._key(cid); if(k)try{localStorage.setItem(k,JSON.stringify(data));}catch(e){} },
+        markLessonComplete(cid,lid){
+            const p=this.get(cid); if(!p.completedLessons.includes(lid)){p.completedLessons.push(lid);p.lastAccessedAt=new Date().toISOString();this.save(cid,p);}
+            _analyticsStore.track(cid,'lesson_complete',{lessonId:lid}); return p;
+        },
+        setCurrentLesson(cid,lid){
+            const p=this.get(cid); p.currentLessonId=lid;
+            if(!p.startedAt)p.startedAt=new Date().toISOString(); p.lastAccessedAt=new Date().toISOString(); this.save(cid,p);
+        },
+        setPosition(cid,lid,seconds){
+            if(!_progressTimers[cid])_progressTimers[cid]={};
+            clearTimeout(_progressTimers[cid][lid]);
+            _progressTimers[cid][lid]=setTimeout(()=>{
+                const p=this.get(cid); if(!p.currentPosition)p.currentPosition={};
+                p.currentPosition[lid]=seconds; p.lastAccessedAt=new Date().toISOString(); this.save(cid,p);
+            },2000);
+        },
+        getCompletionPct(cid){
+            const c=_courseStore.getById(cid); if(!c)return 0;
+            const t=_countLessons(c.modules); if(t===0)return 0;
+            return Math.round((this.get(cid).completedLessons.length/t)*100);
+        },
+        isComplete(cid){
+            const c=_courseStore.getById(cid); if(!c)return false;
+            return this.get(cid).completedLessons.length>=_countLessons(c.modules);
+        },
+        getLastLesson(cid){
+            const p=this.get(cid); if(p.currentLessonId)return p.currentLessonId;
+            const c=_courseStore.getById(cid); if(!c||!c.modules.length)return null;
+            for(const m of c.modules)for(const l of m.lessons)if(!p.completedLessons.includes(l.id))return l.id;
+            return c.modules[0].lessons[0]?c.modules[0].lessons[0].id:null;
+        }
+    };
+
+    // ── Analytics Store ───────────────────────────────────────
+    const _analyticsStore = {
+        _read(){ try{return JSON.parse(localStorage.getItem(COURSE_ANALYTICS_KEY)||'{}');}catch(e){return {};} },
+        _write(d){ try{localStorage.setItem(COURSE_ANALYTICS_KEY,JSON.stringify(d));}catch(e){} },
+        track(cid,event,data){
+            const a=this._read(); if(!a[cid])a[cid]={views:0,starts:0,completions:0,events:[]};
+            const e=a[cid];
+            if(event==='course_view')e.views++; if(event==='course_start')e.starts++; if(event==='course_complete')e.completions++;
+            e.events.unshift({event,data:data||{},timestamp:new Date().toISOString(),user:(EduAI.RBAC.getUser()||{}).email});
+            if(e.events.length>200)e.events.length=200; this._write(a);
+        },
+        getCourseStats(cid){ const a=this._read(); return a[cid]||{views:0,starts:0,completions:0,events:[]}; },
+        getAll(){ return this._read(); }
+    };
+
+    // ── Course Builder ────────────────────────────────────────
+    const _courseBuilder = {
+        addModule(cid,title){
+            if(!_courseAuth.canManageModules(cid)){showToast('⛔ Permission denied.','error');return null;}
+            const c=_courseStore.getById(cid); if(!c)return null;
+            const m={id:_genId('mod'),title:title||'New Module',position:c.modules.length,lessons:[]};
+            c.modules.push(m); _courseStore.update(cid,{modules:c.modules});
+            _courseAudit.log('module_created',cid,title,{moduleId:m.id}); return m;
+        },
+        updateModule(cid,mid,data){
+            if(!_courseAuth.canManageModules(cid)){showToast('⛔ Permission denied.','error');return false;}
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return false;
+            Object.assign(m,data); _courseStore.update(cid,{modules:c.modules}); return true;
+        },
+        deleteModule(cid,mid){
+            if(!_courseAuth.canManageModules(cid)){showToast('⛔ Permission denied.','error');return false;}
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const i=c.modules.findIndex(x=>x.id===mid); if(i===-1)return false;
+            const m=c.modules.splice(i,1)[0]; c.modules.forEach((x,j)=>x.position=j);
+            _courseStore.update(cid,{modules:c.modules});
+            _courseAudit.log('module_deleted',cid,m.title,{moduleId:mid}); return true;
+        },
+        moveModule(cid,mid,dir){
+            if(!_courseAuth.canManageModules(cid))return false;
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const i=c.modules.findIndex(x=>x.id===mid); if(i===-1)return false;
+            const ni=i+dir; if(ni<0||ni>=c.modules.length)return false;
+            [c.modules[i],c.modules[ni]]=[c.modules[ni],c.modules[i]];
+            c.modules.forEach((x,j)=>x.position=j); _courseStore.update(cid,{modules:c.modules}); return true;
+        },
+        addLesson(cid,mid,data){
+            if(!_courseAuth.canManageLessons(cid)){showToast('⛔ Permission denied.','error');return null;}
+            const c=_courseStore.getById(cid); if(!c)return null;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return null;
+            const l={id:_genId('les'),title:(data&&data.title)||'New Lesson',description:(data&&data.description)||'',
+                position:m.lessons.length, duration:(data&&data.duration)||'10:00',
+                videoSource:(data&&data.videoSource)||{type:'external',url:''},
+                resources:(data&&data.resources)||[], published:true,
+                createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()};
+            m.lessons.push(l); _courseStore.update(cid,{modules:c.modules});
+            _courseAudit.log('lesson_created',cid,l.title,{moduleId:mid,lessonId:l.id}); return l;
+        },
+        updateLesson(cid,mid,lid,data){
+            if(!_courseAuth.canManageLessons(cid)){showToast('⛔ Permission denied.','error');return false;}
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return false;
+            const l=m.lessons.find(x=>x.id===lid); if(!l)return false;
+            Object.keys(data).forEach(k=>{if(k!=='id')l[k]=data[k];});
+            l.updatedAt=new Date().toISOString(); _courseStore.update(cid,{modules:c.modules}); return true;
+        },
+        deleteLesson(cid,mid,lid){
+            if(!_courseAuth.canManageLessons(cid)){showToast('⛔ Permission denied.','error');return false;}
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return false;
+            const i=m.lessons.findIndex(x=>x.id===lid); if(i===-1)return false;
+            const l=m.lessons.splice(i,1)[0]; m.lessons.forEach((x,j)=>x.position=j);
+            _courseStore.update(cid,{modules:c.modules});
+            _courseAudit.log('lesson_deleted',cid,l.title,{moduleId:mid,lessonId:lid}); return true;
+        },
+        moveLesson(cid,mid,lid,dir){
+            if(!_courseAuth.canManageLessons(cid))return false;
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return false;
+            const i=m.lessons.findIndex(x=>x.id===lid); if(i===-1)return false;
+            const ni=i+dir; if(ni<0||ni>=m.lessons.length)return false;
+            [m.lessons[i],m.lessons[ni]]=[m.lessons[ni],m.lessons[i]];
+            m.lessons.forEach((x,j)=>x.position=j); _courseStore.update(cid,{modules:c.modules}); return true;
+        },
+        duplicateLesson(cid,mid,lid){
+            if(!_courseAuth.canManageLessons(cid)){showToast('⛔ Permission denied.','error');return null;}
+            const c=_courseStore.getById(cid); if(!c)return null;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return null;
+            const l=m.lessons.find(x=>x.id===lid); if(!l)return null;
+            const cl=JSON.parse(JSON.stringify(l));
+            cl.id=_genId('les'); cl.title=l.title+' (Copy)'; cl.position=m.lessons.length;
+            cl.createdAt=new Date().toISOString(); cl.updatedAt=new Date().toISOString();
+            (cl.resources||[]).forEach(r=>{r.id=_genId('res');});
+            m.lessons.push(cl); _courseStore.update(cid,{modules:c.modules}); return cl;
+        },
+        addResource(cid,mid,lid,data){
+            if(!_courseAuth.canManageLessons(cid)){showToast('⛔ Permission denied.','error');return null;}
+            const c=_courseStore.getById(cid); if(!c)return null;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return null;
+            const l=m.lessons.find(x=>x.id===lid); if(!l)return null;
+            const r={id:_genId('res'),title:(data&&data.title)||'Resource',type:(data&&data.type)||'pdf',
+                url:(data&&data.url)||'', downloadEnabled:(data&&data.downloadEnabled!==undefined)?data.downloadEnabled:true};
+            if(!l.resources)l.resources=[]; l.resources.push(r);
+            _courseStore.update(cid,{modules:c.modules}); return r;
+        },
+        deleteResource(cid,mid,lid,rid){
+            if(!_courseAuth.canManageLessons(cid)){showToast('⛔ Permission denied.','error');return false;}
+            const c=_courseStore.getById(cid); if(!c)return false;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return false;
+            const l=m.lessons.find(x=>x.id===lid); if(!l||!l.resources)return false;
+            l.resources=l.resources.filter(x=>x.id!==rid);
+            _courseStore.update(cid,{modules:c.modules}); return true;
+        }
+    };
+
+    // ── Flatten helpers for student navigation ────────────────
+    function _flattenLessons(modules){
+        const out=[]; if(!modules)return out;
+        modules.forEach(m=>(m.lessons||[]).forEach(l=>out.push({...l,moduleName:m.title,moduleId:m.id})));
+        return out;
     }
-    function _saveProg(courseId, arr) {
-        const email = EduAI.RBAC.getUser().email;
-        if (email) localStorage.setItem(COURSE_PROG_PREFIX + email + '_' + courseId, JSON.stringify(arr));
+    function _findLessonContext(cid,lid){
+        const c=_courseStore.getById(cid); if(!c)return null;
+        const flat=_flattenLessons(c.modules); const idx=flat.findIndex(l=>l.id===lid);
+        if(idx===-1)return null;
+        return {lesson:flat[idx], index:idx, total:flat.length, prev:idx>0?flat[idx-1]:null, next:idx<flat.length-1?flat[idx+1]:null};
     }
 
+    // ── Main Courses Module ───────────────────────────────────
     window.EduAI.Courses = {
-        init: function() {
+        init: function(){
             _initCoursesDb();
-            const addBtn = document.getElementById('course-add-btn');
-            if (addBtn) addBtn.style.display = EduAI.RBAC.isAdmin() ? 'flex' : 'none';
-            const grid = document.getElementById('courses-grid');
-            if (grid) {
-                this.renderTabs();
-                this.renderGrid('all');
-                
-                // Add event listener for search
-                const search = document.getElementById('course-search-input');
-                if (search) {
-                    search.addEventListener('input', (e) => {
-                        const q = e.target.value.toLowerCase().trim();
-                        const activeCat = document.querySelector('.cft-pill.active')?.dataset.cat || 'all';
-                        this.renderGrid(activeCat, q);
-                    });
-                }
-            }
-
-            // Swatches
-            document.querySelectorAll('.cc-swatch').forEach(sw => {
-                sw.addEventListener('click', () => {
-                    document.querySelectorAll('.cc-swatch').forEach(s => s.classList.remove('picked'));
-                    sw.classList.add('picked');
-                });
-            });
+            const addBtn=document.getElementById('course-add-btn');
+            if(addBtn) addBtn.style.display=_courseAuth.canCreate()?'flex':'none';
+            const grid=document.getElementById('courses-grid');
+            if(grid){ this.renderCatalog(); }
+            const search=document.getElementById('course-search-input');
+            if(search) search.addEventListener('input',(e)=>{_courseSearchQ=e.target.value.toLowerCase().trim();_coursePage=1;this.renderCatalog();});
+            const sortSel=document.getElementById('course-sort-select');
+            if(sortSel) sortSel.addEventListener('change',(e)=>{_courseSortBy=e.target.value;_coursePage=1;this.renderCatalog();});
+            const statusSel=document.getElementById('course-filter-status');
+            if(statusSel) statusSel.addEventListener('change',(e)=>{_courseFilterStatus=e.target.value;_coursePage=1;this.renderCatalog();});
+            const catSel=document.getElementById('course-filter-cat');
+            if(catSel) catSel.addEventListener('change',(e)=>{_courseFilterCat=e.target.value;_coursePage=1;this.renderCatalog();});
+            const levelSel=document.getElementById('course-filter-level');
+            if(levelSel) levelSel.addEventListener('change',(e)=>{_courseFilterLevel=e.target.value;_coursePage=1;this.renderCatalog();});
+            this._renderFilterTabs();
         },
 
-        renderTabs: function() {
-            const wrap = document.getElementById('courses-filter-tabs');
-            if (!wrap) return;
-            const cats = new Set();
-            _coursesCache.forEach(c => { if(c.cat) cats.add(c.cat); });
-            
-            let html = `<button class="cft-pill active" data-cat="all">All Courses</button>`;
-            cats.forEach(c => { html += `<button class="cft-pill" data-cat="${c}">${c}</button>`; });
-            wrap.innerHTML = html;
-
-            wrap.querySelectorAll('.cft-pill').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    wrap.querySelectorAll('.cft-pill').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    const q = document.getElementById('course-search-input')?.value.toLowerCase().trim() || '';
-                    this.renderGrid(btn.dataset.cat, q);
-                });
+        // ── View switching ───────────────────────────────────
+        _showView(name){
+            ['courses-catalog-view','courses-detail-view','courses-player-view','courses-builder-view'].forEach(id=>{
+                const el=document.getElementById(id); if(el)el.style.display='none';
             });
+            const el=document.getElementById('courses-'+name+'-view');
+            if(el)el.style.display='block'; _courseView=name;
         },
 
-        renderGrid: function(catFilter = 'all', searchQ = '') {
-            const grid = document.getElementById('courses-grid');
-            if (!grid) return;
-
-            let filtered = _coursesCache;
-            if (catFilter !== 'all') {
-                filtered = filtered.filter(c => c.cat === catFilter);
+        // ── Filter Tabs (categories) ─────────────────────────
+        _renderFilterTabs(){
+            const wrap=document.getElementById('courses-filter-tabs'); if(!wrap)return;
+            if(!_courseAuth.isManagement()){
+                wrap.style.display='none'; return;
             }
-            if (searchQ) {
-                filtered = filtered.filter(c => 
-                    c.title.toLowerCase().includes(searchQ) || 
-                    (c.desc && c.desc.toLowerCase().includes(searchQ))
-                );
-            }
+            wrap.style.display='flex';
+        },
 
-            if (filtered.length === 0) {
-                grid.innerHTML = `
-                    <div class="courses-empty">
-                        <div class="courses-empty-icon"><i class="fas fa-search"></i></div>
-                        <h3>No Courses Found</h3>
-                        <p>Try adjusting your search or filter to find what you're looking for.</p>
+        // ── Student Catalog ──────────────────────────────────
+        renderCatalog(){
+            const isMgmt=_courseAuth.isManagement();
+            if(isMgmt){this.renderManagementTable();return;}
+            this.renderStudentCatalog();
+        },
+
+        renderStudentCatalog(){
+            this._showView('catalog');
+            const grid=document.getElementById('courses-grid'); if(!grid)return;
+            let courses=_courseStore.getStudentVisible();
+            if(_courseSearchQ)courses=courses.filter(c=>c.title.toLowerCase().includes(_courseSearchQ)||(c.instructor||'').toLowerCase().includes(_courseSearchQ));
+            if(_courseFilterCat!=='all')courses=courses.filter(c=>c.category===_courseFilterCat);
+            if(_courseFilterLevel!=='all')courses=courses.filter(c=>c.level===_courseFilterLevel);
+            courses.sort((a,b)=>{
+                if(_courseSortBy==='title')return a.title.localeCompare(b.title);
+                if(_courseSortBy==='created')return new Date(b.createdAt)-new Date(a.createdAt);
+                return new Date(b.updatedAt)-new Date(a.updatedAt);
+            });
+            if(!courses.length){
+                grid.innerHTML='<div class="courses-empty"><div class="courses-empty-icon"><i class="fas fa-book-open"></i></div><h3>No Courses Available</h3><p>Check back later for new courses.</p></div>';
+                this._updateCatalogFilters(courses); return;
+            }
+            this._updateCatalogFilters(courses);
+            let html='';
+            courses.forEach(c=>{
+                const tot=_countLessons(c.modules); const prog=_progressStore.getCompletionPct(c.id);
+                const p=_progressStore.get(c.id); const hasStarted=p.startedAt;
+                html+=`<div class="course-card" onclick="EduAI.Courses.openDetail('${c.id}')">
+                    <div class="course-thumb" style="background:linear-gradient(135deg,${c.color||'#6c63ff'},#1f2937)">
+                        <div class="course-thumb-overlay"></div>
+                        <i class="fas fa-graduation-cap course-thumb-icon"></i>
+                        <div class="course-vid-badge"><i class="fas fa-film"></i> ${tot} Lessons</div>
+                        ${c.level?'<div class="course-level-badge">'+_escHtml(c.level)+'</div>':''}
+                    </div>
+                    <div class="course-body">
+                        <div class="course-cat-tag" style="color:${c.color||'var(--primary)'};border-color:${c.color||'var(--primary)'}40;background:${c.color||'var(--primary)'}15">
+                            <i class="fas fa-tag"></i> ${_escHtml(c.category||'Other')}
+                        </div>
+                        <div class="course-title-c">${_escHtml(c.title)}</div>
+                        <div class="course-desc-c">${_escHtml(c.shortDescription||c.description||'')}</div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;color:var(--text3)">
+                            <i class="fas fa-user"></i> ${_escHtml(c.instructor||'Unknown')}
+                            <span style="margin-left:auto"><i class="fas fa-clock"></i> ${_calcDuration(c.modules)}</span>
+                        </div>
+                        <div class="course-prog-wrap">
+                            <div class="course-prog-lbl"><span>Progress</span><span>${prog}%</span></div>
+                            <div class="course-prog-track"><div class="course-prog-fill-c" style="width:${prog}%;background:${c.color||'var(--primary)'}"></div></div>
+                        </div>
+                        <button class="course-cta-btn ${hasStarted?'continue':''}" onclick="event.stopPropagation();EduAI.Courses.openDetail('${c.id}')">
+                            <i class="fas ${hasStarted?'fa-play':'fa-plus-circle'}"></i> ${hasStarted?(prog>=100?'Review Course':'Continue Learning'):'Start Course'}
+                        </button>
+                    </div>
+                </div>`;
+            });
+            grid.innerHTML=html;
+        },
+
+        _updateCatalogFilters(courses){
+            const catSel=document.getElementById('course-filter-cat');
+            const levelSel=document.getElementById('course-filter-level');
+            if(catSel){
+                const cats=new Set();(courses||[]).forEach(c=>{if(c.category)cats.add(c.category);});
+                let opts='<option value="all">All Categories</option>';
+                COURSE_CATEGORIES.forEach(c=>{if(cats.has(c))opts+=`<option value="${c}">${c}</option>`;});
+                catSel.innerHTML=opts; catSel.value=_courseFilterCat;
+            }
+            if(levelSel){
+                let opts='<option value="all">All Levels</option>';
+                COURSE_LEVELS.forEach(l=>{opts+=`<option value="${l}">${l}</option>`;});
+                levelSel.innerHTML=opts; levelSel.value=_courseFilterLevel;
+            }
+        },
+
+        // ── Management Table (Admin/Manager) ─────────────────
+        renderManagementTable(){
+            this._showView('catalog');
+            const grid=document.getElementById('courses-grid'); if(!grid)return;
+            let courses=_courseStore.getAll(true);
+            if(_courseSearchQ)courses=courses.filter(c=>c.title.toLowerCase().includes(_courseSearchQ)||(c.instructor||'').toLowerCase().includes(_courseSearchQ));
+            if(_courseFilterStatus!=='all'){
+                if(_courseFilterStatus==='deleted')courses=courses.filter(c=>c.deletedAt);
+                else courses=courses.filter(c=>c.status===_courseFilterStatus&&!c.deletedAt);
+            }else{courses=courses.filter(c=>!c.deletedAt);}
+            courses.sort((a,b)=>{
+                if(_courseSortBy==='title')return a.title.localeCompare(b.title);
+                if(_courseSortBy==='created')return new Date(b.createdAt)-new Date(a.createdAt);
+                return new Date(b.updatedAt)-new Date(a.updatedAt);
+            });
+            const total=courses.length;
+            const totalPages=Math.ceil(total/_coursePageSize);
+            if(_coursePage>totalPages)_coursePage=totalPages||1;
+            const start=(_coursePage-1)*_coursePageSize;
+            const paged=courses.slice(start,start+_coursePageSize);
+
+            const statusBadge=(s)=>{const m={draft:{c:'#f59e0b',l:'Draft'},published:{c:'#22c55e',l:'Published'},archived:{c:'#6b7299',l:'Archived'}};const x=m[s]||m.draft;return `<span style="padding:3px 10px;border-radius:20px;background:${x.c}22;border:1px solid ${x.c}44;color:${x.c};font-size:0.72rem;font-weight:700;">${x.l}</span>`;};
+
+            let html=`<div class="courses-mgmt-table-wrap">
+                <table class="courses-mgmt-table">
+                    <thead><tr>
+                        <th>Course</th><th>Status</th><th>Modules</th><th>Lessons</th><th>Updated</th><th>Actions</th>
+                    </tr></thead><tbody>`;
+
+            if(!paged.length){
+                html+=`<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3);">No courses found.</td></tr>`;
+            }else{
+                paged.forEach(c=>{
+                    const canUpd=_courseAuth.canUpdate(c.id);
+                    const canDel=_courseAuth.canDelete(c.id);
+                    const canPub=_courseAuth.canPublish(c.id);
+                    html+=`<tr class="${c.deletedAt?'course-row-deleted':''}">
+                        <td><div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:36px;height:36px;border-radius:10px;background:${c.color||'#6c63ff'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.85rem;flex-shrink:0"><i class="fas fa-graduation-cap"></i></div>
+                            <div><div style="font-weight:700;font-size:0.88rem">${_escHtml(c.title)}</div><div style="font-size:0.72rem;color:var(--text3)">${_escHtml(c.instructor||'Unknown')}</div></div>
+                        </div></td>
+                        <td>${statusBadge(c.status)}${c.deletedAt?'<span style="margin-left:4px;padding:2px 6px;border-radius:6px;background:rgba(239,68,68,0.12);color:#ef4444;font-size:0.65rem;font-weight:700">DELETED</span>':''}</td>
+                        <td style="font-size:0.85rem;font-weight:600">${(c.modules||[]).length}</td>
+                        <td style="font-size:0.85rem;font-weight:600">${_countLessons(c.modules)}</td>
+                        <td style="font-size:0.78rem;color:var(--text3)">${c.updatedAt?new Date(c.updatedAt).toLocaleDateString():'—'}</td>
+                        <td><div style="display:flex;gap:4px;flex-wrap:wrap">`;
+
+                    if(c.deletedAt&&EduAI.RBAC.isAdmin()){
+                        html+=`<button class="cmg-btn cmg-restore" onclick="EduAI.Courses.restoreCourse('${c.id}')" title="Restore"><i class="fas fa-undo"></i></button>`;
+                    }else{
+                        if(canUpd) html+=`<button class="cmg-btn cmg-edit" onclick="EduAI.Courses.openBuilder('${c.id}')" title="Edit/Builder"><i class="fas fa-edit"></i></button>`;
+                        if(canPub){
+                            if(c.status==='published') html+=`<button class="cmg-btn cmg-unpub" onclick="EduAI.Courses.unpublishCourse('${c.id}')" title="Unpublish"><i class="fas fa-eye-slash"></i></button>`;
+                            else if(c.status==='draft') html+=`<button class="cmg-btn cmg-pub" onclick="EduAI.Courses.publishCourse('${c.id}')" title="Publish"><i class="fas fa-eye"></i></button>`;
+                        }
+                        if(canUpd) html+=`<button class="cmg-btn cmg-dup" onclick="EduAI.Courses.duplicateCourse('${c.id}')" title="Duplicate"><i class="fas fa-copy"></i></button>`;
+                        if(canPub&&c.status!=='archived') html+=`<button class="cmg-btn cmg-arch" onclick="EduAI.Courses.archiveCourse('${c.id}')" title="Archive"><i class="fas fa-archive"></i></button>`;
+                        if(EduAI.RBAC.isAdmin()) html+=`<button class="cmg-btn cmg-perms" onclick="EduAI.Courses.openPermissions('${c.id}')" title="Manager Permissions"><i class="fas fa-user-lock"></i></button>`;
+                        if(canUpd) html+=`<button class="cmg-btn cmg-analytics" onclick="EduAI.Courses.openAnalytics('${c.id}')" title="Analytics"><i class="fas fa-chart-bar"></i></button>`;
+                        if(canDel) html+=`<button class="cmg-btn cmg-del" onclick="EduAI.Courses.deleteCourse('${c.id}')" title="Delete"><i class="fas fa-trash"></i></button>`;
+                    }
+                    html+=`</div></td></tr>`;
+                });
+            }
+            html+=`</tbody></table></div>`;
+
+            if(totalPages>1){
+                html+=`<div class="courses-pagination"><button ${_coursePage<=1?'disabled':''} onclick="EduAI.Courses.goPage(${_coursePage-1})"><i class="fas fa-chevron-left"></i></button>`;
+                for(let i=1;i<=totalPages;i++) html+=`<button class="${i===_coursePage?'active':''}" onclick="EduAI.Courses.goPage(${i})">${i}</button>`;
+                html+=`<button ${_coursePage>=totalPages?'disabled':''} onclick="EduAI.Courses.goPage(${_coursePage+1})"><i class="fas fa-chevron-right"></i></button></div>`;
+            }
+            html+=`<div class="courses-mgmt-footer"><span style="font-size:0.8rem;color:var(--text3)">Showing ${start+1}-${Math.min(start+_coursePageSize,total)} of ${total} courses</span></div>`;
+            grid.innerHTML=html;
+        },
+        goPage(p){_coursePage=p;this.renderCatalog();},
+
+        // ── Course Detail (Student) ──────────────────────────
+        openDetail(cid){
+            const c=_courseStore.getById(cid); if(!c)return;
+            if(!_courseAuth.canView(cid)){showToast('⛔ Access denied.','error');return;}
+            _activeCourseId=cid; this._showView('detail');
+            const prog=_progressStore.get(cid);
+            const flat=_flattenLessons(c.modules);
+            const total=flat.length; const completed=prog.completedLessons.length;
+            const pct=total?Math.round((completed/total)*100):0;
+            const lastLesson=_progressStore.getLastLesson(cid);
+
+            let modulesHtml='';
+            (c.modules||[]).forEach((m,mi)=>{
+                let lessonsHtml='';
+                (m.lessons||[]).forEach((l,li)=>{
+                    const isDone=prog.completedLessons.includes(l.id);
+                    const isCurrent=l.id===lastLesson;
+                    lessonsHtml+=`<div class="crs-mod-lesson ${isDone?'done':''} ${isCurrent?'current':''}" onclick="EduAI.Courses.openPlayer('${cid}','${l.id}')">
+                        <div class="crs-mod-les-num">${isDone?'<i class="fas fa-check"></i>':(li+1)}</div>
+                        <div class="crs-mod-les-info">
+                            <div class="crs-mod-les-title">${_escHtml(l.title)}</div>
+                            <div class="crs-mod-les-meta"><i class="far fa-clock"></i> ${_escHtml(l.duration||'10:00')}</div>
+                        </div>
+                        <i class="fas fa-play-circle crs-mod-les-play"></i>
                     </div>`;
-                return;
-            }
-
-            const isAdmin = EduAI.RBAC.isAdmin();
-            
-            let html = '';
-            filtered.forEach(c => {
-                const prog = _getProg(c.id);
-                const total = c.lessons.length;
-                const completed = prog.length;
-                const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
-                
-                let adminHtml = '';
-                if (isAdmin) {
-                    adminHtml = `
-                        <div class="course-admin-btns">
-                            <button class="cab-btn cab-edit" onclick="event.stopPropagation(); EduAI.Courses.openEditModal('${c.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="cab-btn cab-del" onclick="event.stopPropagation(); EduAI.Courses.deleteCourse('${c.id}')"><i class="fas fa-trash"></i></button>
-                        </div>
-                    `;
-                }
-
-                html += `
-                    <div class="course-card" onclick="EduAI.Courses.openPlayer('${c.id}')">
-                        <div class="course-thumb" style="background: linear-gradient(135deg, ${c.color}, #1f2937)">
-                            <div class="course-thumb-overlay"></div>
-                            <i class="fas fa-graduation-cap course-thumb-icon"></i>
-                            <div class="course-vid-badge"><i class="fas fa-film"></i> ${total} Lessons</div>
-                            ${adminHtml}
-                        </div>
-                        <div class="course-body">
-                            <div class="course-cat-tag" style="color: ${c.color}; border-color: ${c.color}40; background: ${c.color}15">
-                                <i class="fas fa-tag"></i> ${c.cat}
-                            </div>
-                            <div class="course-title-c">${c.title}</div>
-                            <div class="course-desc-c">${c.desc || 'No description provided.'}</div>
-                            
-                            <div class="course-prog-wrap">
-                                <div class="course-prog-lbl">
-                                    <span>Progress</span><span>${pct}%</span>
-                                </div>
-                                <div class="course-prog-track">
-                                    <div class="course-prog-fill-c" style="width: ${pct}%; background: ${c.color}"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            grid.innerHTML = html;
-        },
-
-        openPlayer: function(id) {
-            const course = _coursesCache.find(c => c.id === id);
-            if (!course) return;
-            _activeCourseId = id;
-            
-            document.getElementById('courses-library-view').style.display = 'none';
-            document.getElementById('courses-player-view').classList.add('visible');
-            
-            document.getElementById('cpv-course-name').textContent = course.title;
-            this.renderPlaylist();
-            
-            if (course.lessons.length > 0) {
-                // Find first unwatched or just start first
-                const prog = _getProg(id);
-                let firstUnwatched = course.lessons.find(v => !prog.includes(v.id));
-                this.loadLesson((firstUnwatched || course.lessons[0]).id);
-            } else {
-                document.getElementById('cpv-iframe-wrap').innerHTML = `<div style="color:#fff; padding:40px; text-align:center;">No lessons in this course yet.</div>`;
-                document.getElementById('cpv-video-title').textContent = "Empty Course";
-                document.getElementById('cpv-video-desc').textContent = "Waiting for admin to add content.";
-                document.getElementById('cpv-mark-btn').disabled = true;
-                document.getElementById('cpv-resources').innerHTML = '';
-                this.updateNavButtons();
-            }
-        },
-
-        closePlayer: function() {
-            _activeCourseId = null;
-            _activeLessonId = null;
-            document.getElementById('cpv-iframe-wrap').innerHTML = ''; // stop video
-            document.getElementById('courses-player-view').classList.remove('visible');
-            document.getElementById('courses-library-view').style.display = 'block';
-            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
-        },
-
-        renderPlaylist: function() {
-            if (!_activeCourseId) return;
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            const prog = _getProg(_activeCourseId);
-            const total = course.lessons.length;
-            const completed = prog.length;
-            const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-            document.getElementById('cpv-prog-count').textContent = `${completed}/${total} Completed`;
-            document.getElementById('cpv-prog-fill').style.width = pct + '%';
-            document.getElementById('cpv-prog-fill').style.background = course.color;
-
-            let html = '';
-            course.lessons.forEach((l, idx) => {
-                const isDone = prog.includes(l.id);
-                const isActive = l.id === _activeLessonId;
-                let cClass = isActive ? 'active' : '';
-                if (isDone) cClass += ' done';
-                
-                html += `
-                    <div class="cpv-lesson ${cClass}" onclick="EduAI.Courses.loadLesson('${l.id}')">
-                        <div class="cpv-lesson-num">${idx + 1}</div>
-                        <div class="cpv-lesson-info">
-                            <div class="cpv-lesson-name">${l.title}</div>
-                            <div class="cpv-lesson-dur"><i class="far fa-clock"></i> ${(l.video && l.video.dur) || '10:00'}</div>
-                        </div>
-                        <i class="fas fa-check-circle cpv-check"></i>
-                    </div>
-                `;
-            });
-            document.getElementById('cpv-playlist-body').innerHTML = html;
-        },
-
-        loadLesson: function(lessonId) {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            if (!course) return;
-            const lesson = course.lessons.find(l => l.id === lessonId);
-            if (!lesson) return;
-            _activeLessonId = lessonId;
-
-            // Generate iframe
-            let iframeUrl = (lesson.video && lesson.video.url) || '';
-            if (iframeUrl.includes('youtube.com/watch?v=')) {
-                iframeUrl = iframeUrl.replace('watch?v=', 'embed/');
-            }
-            document.getElementById('cpv-iframe-wrap').innerHTML = iframeUrl
-                ? `<iframe src="${iframeUrl}" allowfullscreen allow="autoplay; encrypted-media"></iframe>`
-                : `<div style="color:#fff; padding:40px; text-align:center; font-family:var(--font-main);"><i class="fas fa-video" style="font-size:2rem; opacity:0.5; display:block; margin-bottom:12px;"></i>No video attached to this lesson yet.</div>`;
-
-            const idx = course.lessons.findIndex(l => l.id === lessonId);
-            document.getElementById('cpv-video-title').textContent = `Lesson ${String(idx + 1).padStart(2, '0')} — ${lesson.title}`;
-            document.getElementById('cpv-video-desc').textContent = 'Watch the lesson video, then review the attached PDF notes.';
-
-            const hasPdf = !!(lesson.pdf && lesson.pdf.url);
-            document.getElementById('cpv-resources').innerHTML = `
-                <div class="cpv-res-grid">
-                    <div class="cpv-res-card cpv-res-video">
-                        <div class="cpv-res-ico">🎥</div>
-                        <div class="cpv-res-info">
-                            <div class="cpv-res-type">Video</div>
-                            <div class="cpv-res-sub">${lesson.title}</div>
-                        </div>
-                        <button class="cpv-res-btn cpv-res-watch" onclick="EduAI.Courses.watchVideo()" ${iframeUrl ? '' : 'disabled'}><i class="fas fa-play"></i> Watch Lesson</button>
-                    </div>
-                    <div class="cpv-res-card cpv-res-pdf">
-                        <div class="cpv-res-ico">📄</div>
-                        <div class="cpv-res-info">
-                            <div class="cpv-res-type">PDF</div>
-                            <div class="cpv-res-sub">${lesson.pdf ? (lesson.pdf.title || 'Lesson notes') : 'Lesson notes'}</div>
-                        </div>
-                        <div class="cpv-res-actions">
-                            <button class="cpv-res-btn cpv-res-open" onclick="EduAI.Courses.openPdf('${lesson.id}')" ${hasPdf ? '' : 'disabled'}><i class="fas fa-external-link-alt"></i> Open PDF</button>
-                            <button class="cpv-res-btn cpv-res-dl" onclick="EduAI.Courses.downloadPdf('${lesson.id}')" ${hasPdf ? '' : 'disabled'}><i class="fas fa-download"></i> Download</button>
-                        </div>
-                    </div>
-                </div>`;
-
-            const btn = document.getElementById('cpv-mark-btn');
-            btn.disabled = false;
-            btn.onclick = () => { this.markCompleted(lessonId); };
-
-            const prog = _getProg(_activeCourseId);
-            if (prog.includes(lessonId)) {
-                btn.innerHTML = `<i class="fas fa-check"></i> Completed`;
-                btn.style.background = 'var(--bg3)';
-                btn.style.color = 'var(--text3)';
-            } else {
-                btn.innerHTML = `<i class="fas fa-check-circle"></i> Mark as Completed`;
-                btn.style.background = '';
-                btn.style.color = '';
-            }
-
-            this.renderPlaylist();
-            this.updateNavButtons();
-        },
-
-        updateNavButtons: function() {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            const prevBtn = document.getElementById('cpv-prev-btn');
-            const nextBtn = document.getElementById('cpv-next-btn');
-            if (!course || !prevBtn || !nextBtn) return;
-            const idx = course.lessons.findIndex(l => l.id === _activeLessonId);
-            prevBtn.disabled = idx <= 0;
-            nextBtn.disabled = idx < 0 || idx >= course.lessons.length - 1;
-        },
-
-        watchVideo: function() {
-            if (_activeLessonId) this.loadLesson(_activeLessonId);
-        },
-
-        prevLesson: function() {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            if (!course || course.lessons.length === 0) return;
-            const idx = course.lessons.findIndex(l => l.id === _activeLessonId);
-            if (idx > 0) this.loadLesson(course.lessons[idx - 1].id);
-        },
-
-        nextLesson: function() {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            if (!course || course.lessons.length === 0) return;
-            const idx = course.lessons.findIndex(l => l.id === _activeLessonId);
-            if (idx >= 0 && idx < course.lessons.length - 1) this.loadLesson(course.lessons[idx + 1].id);
-        },
-
-        openPdf: function(lessonId) {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            if (!course) return;
-            const lesson = course.lessons.find(l => l.id === lessonId);
-            if (!lesson || !lesson.pdf || !lesson.pdf.url) {
-                showToast('📄 No PDF attached to this lesson yet.', 'info');
-                return;
-            }
-            window.open(lesson.pdf.url, '_blank');
-        },
-
-        downloadPdf: function(lessonId) {
-            const course = _coursesCache.find(c => c.id === _activeCourseId);
-            if (!course) return;
-            const lesson = course.lessons.find(l => l.id === lessonId);
-            if (!lesson || !lesson.pdf || !lesson.pdf.url) {
-                showToast('📄 No PDF attached to this lesson yet.', 'info');
-                return;
-            }
-            const a = document.createElement('a');
-            a.href = lesson.pdf.url;
-            a.download = (lesson.pdf.title || lesson.title || 'lesson') + '.pdf';
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast('📄 Download started.', 'success');
-        },
-
-        markCompleted: function(lessonId) {
-            const prog = _getProg(_activeCourseId);
-            if (!prog.includes(lessonId)) {
-                prog.push(lessonId);
-                _saveProg(_activeCourseId, prog);
-            }
-            this.loadLesson(lessonId); // refresh
-        },
-
-        /* --- Admin --- */
-        openCreateModal: function() {
-            if (!EduAI.RBAC.isAdmin()) { showToast('⛔ Admins only — students cannot create courses.', 'error', 3500); return; }
-            _courseEditingId = null;
-            document.getElementById('cc-modal-title').textContent = "Create New Course";
-            document.getElementById('cc-course-name').value = '';
-            document.getElementById('cc-course-desc').value = '';
-            document.getElementById('cc-course-cat').value = 'Programming';
-            document.querySelectorAll('.cc-swatch')[0].click();
-            document.getElementById('cc-vid-list').innerHTML = '';
-            _lessonCounter = 0;
-            this.addLessonRow(); // start with one blank
-            document.getElementById('cc-overlay').classList.add('open');
-        },
-
-        openEditModal: function(id) {
-            if (!EduAI.RBAC.isAdmin()) { showToast('⛔ Admins only — students cannot edit courses.', 'error', 3500); return; }
-            const c = _coursesCache.find(x => x.id === id);
-            if (!c) return;
-            _courseEditingId = id;
-            
-            document.getElementById('cc-modal-title').textContent = "Edit Course";
-            document.getElementById('cc-course-name').value = c.title;
-            document.getElementById('cc-course-desc').value = c.desc || '';
-            document.getElementById('cc-course-cat').value = c.cat || 'Programming';
-            
-            let matchedSwatch = false;
-            document.querySelectorAll('.cc-swatch').forEach(sw => {
-                sw.classList.remove('picked');
-                if (sw.dataset.c === c.color) { sw.classList.add('picked'); matchedSwatch = true; }
-            });
-            if (!matchedSwatch) document.querySelectorAll('.cc-swatch')[0].classList.add('picked');
-
-            const list = document.getElementById('cc-vid-list');
-            list.innerHTML = '';
-            _lessonCounter = 0;
-            if (c.lessons.length === 0) {
-                this.addLessonRow();
-            } else {
-                c.lessons.forEach(l => {
-                    this.addLessonRow(l.id, l.title, (l.video && l.video.url) || '', (l.pdf && l.pdf.title) || '', (l.pdf && l.pdf.url) || '');
                 });
-            }
+                modulesHtml+=`<div class="crs-module">
+                    <div class="crs-mod-header" onclick="this.parentElement.classList.toggle('expanded')">
+                        <div class="crs-mod-info"><span class="crs-mod-num">Module ${mi+1}</span><span class="crs-mod-title">${_escHtml(m.title)}</span></div>
+                        <span class="crs-mod-count">${(m.lessons||[]).length} lessons <i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="crs-mod-lessons">${lessonsHtml}</div>
+                </div>`;
+            });
 
-            document.getElementById('cc-overlay').classList.add('open');
-        },
-
-        closeModal: function() {
-            document.getElementById('cc-overlay').classList.remove('open');
-        },
-
-        addLessonRow: function(id = '', title = '', videoUrl = '', pdfTitle = '', pdfUrl = '') {
-            _lessonCounter++;
-            const rowId = 'lsn_r_' + _lessonCounter;
-            const div = document.createElement('div');
-            div.className = 'cc-lesson-row';
-            div.id = rowId;
-            if (id) div.dataset.id = id;
-            div.innerHTML = `
-                <div class="cc-lsn-hdr">
-                    <span class="cc-lsn-title"><i class="fas fa-list-ol"></i> Lesson <span class="cc-lsn-idx">${_lessonCounter}</span></span>
-                    <button class="cc-vid-del" onclick="document.getElementById('${rowId}').remove()" title="Remove Lesson"><i class="fas fa-trash"></i></button>
+            document.getElementById('courses-detail-view').innerHTML=`
+                <button class="cpv-back" onclick="EduAI.Courses._showView('catalog');EduAI.Courses.renderCatalog();"><i class="fas fa-arrow-left"></i> Back to Catalog</button>
+                <div class="crs-detail-header">
+                    <div class="crs-detail-thumb" style="background:linear-gradient(135deg,${c.color||'#6c63ff'},#1f2937)">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="crs-detail-info">
+                        <div class="crs-detail-tags">
+                            ${c.category?'<span class="crs-tag"><i class="fas fa-tag"></i> '+_escHtml(c.category)+'</span>':''}
+                            ${c.level?'<span class="crs-tag"><i class="fas fa-signal"></i> '+_escHtml(c.level)+'</span>':''}
+                            ${c.language?'<span class="crs-tag"><i class="fas fa-globe"></i> '+_escHtml(c.language)+'</span>':''}
+                        </div>
+                        <h2 class="crs-detail-title">${_escHtml(c.title)}</h2>
+                        <p class="crs-detail-desc">${_escHtml(c.description||c.shortDescription||'')}</p>
+                        <div class="crs-detail-meta">
+                            <span><i class="fas fa-user"></i> ${_escHtml(c.instructor||'Unknown')}</span>
+                            <span><i class="fas fa-clock"></i> ${_calcDuration(c.modules)}</span>
+                            <span><i class="fas fa-list"></i> ${total} Lessons</span>
+                            <span><i class="fas fa-layer-group"></i> ${(c.modules||[]).length} Modules</span>
+                        </div>
+                        <div class="crs-detail-prog">
+                            <div class="crs-detail-prog-bar"><div class="crs-detail-prog-fill" style="width:${pct}%;background:${c.color||'var(--primary)'}"></div></div>
+                            <span class="crs-detail-prog-pct">${pct}% Complete (${completed}/${total})</span>
+                        </div>
+                        ${lastLesson?`<button class="crs-detail-start-btn" onclick="EduAI.Courses.openPlayer('${cid}','${lastLesson}')">
+                            <i class="fas ${pct>0?'fa-play':'fa-plus-circle'}"></i> ${pct>=100?'Review Course':pct>0?'Continue Learning':'Start Course'}
+                        </button>`:''}
+                    </div>
                 </div>
-                <div class="cc-lr-grid">
-                    <div class="cc-lr-field">
-                        <label class="cc-lr-lbl">🎥 Video Title</label>
-                        <input type="text" class="cc-vid-inp cv-title" placeholder="e.g. Intro to Closures" value="${title}">
-                    </div>
-                    <div class="cc-lr-field">
-                        <label class="cc-lr-lbl">🎥 Video URL</label>
-                        <input type="text" class="cc-vid-inp cv-url" placeholder="YouTube URL or embed link" value="${videoUrl}">
-                    </div>
-                    <div class="cc-lr-field">
-                        <label class="cc-lr-lbl">📄 PDF Title</label>
-                        <input type="text" class="cc-vid-inp cv-pdf-title" placeholder="e.g. Intro to Closures — Notes" value="${pdfTitle}">
-                    </div>
-                    <div class="cc-lr-field">
-                        <label class="cc-lr-lbl">📄 PDF URL / Link</label>
-                        <input type="text" class="cc-vid-inp cv-pdf-url" placeholder="https://.../lesson-01.pdf" value="${pdfUrl}">
-                    </div>
+                <div class="crs-detail-curriculum">
+                    <h3><i class="fas fa-list-ol"></i> Course Curriculum</h3>
+                    ${modulesHtml||'<p style="color:var(--text3);padding:20px;">No content yet.</p>'}
                 </div>`;
-            document.getElementById('cc-vid-list').appendChild(div);
         },
 
-        saveCourse: function() {
-            if (!EduAI.RBAC.isAdmin()) { showToast('⛔ Admins only — students cannot save courses.', 'error', 3500); return; }
-            const title = document.getElementById('cc-course-name').value.trim();
-            if (!title) return alert("Course name is required.");
-            const desc = document.getElementById('cc-course-desc').value.trim();
-            const cat = document.getElementById('cc-course-cat').value;
-            const color = document.querySelector('.cc-swatch.picked')?.dataset.c || '#6c63ff';
+        // ── Player ───────────────────────────────────────────
+        openPlayer(cid,lid){
+            const c=_courseStore.getById(cid); if(!c)return;
+            if(!_courseAuth.canView(cid)){showToast('⛔ Access denied.','error');return;}
+            _activeCourseId=cid;
+            this._showView('player');
+            if(!lid)lid=_progressStore.getLastLesson(cid);
+            if(!lid&&c.modules.length&&c.modules[0].lessons.length)lid=c.modules[0].lessons[0].id;
+            _analyticsStore.track(cid,'course_start',{});
 
-            const lessons = [];
-            document.querySelectorAll('.cc-lesson-row').forEach((row, i) => {
-                const vt = row.querySelector('.cv-title').value.trim();
-                const vu = row.querySelector('.cv-url').value.trim();
-                const pt = row.querySelector('.cv-pdf-title').value.trim();
-                const pu = row.querySelector('.cv-pdf-url').value.trim();
-                if (vt || vu || pt || pu) {
-                    lessons.push({
-                        id: row.dataset.id || ('l_' + Date.now() + '_' + i),
-                        title: vt || (pt || 'Untitled Lesson'),
-                        video: { url: vu || '', dur: '10:00' }, // mock duration
-                        pdf: { title: pt || (vt || 'Lesson Notes'), url: pu || '' }
-                    });
-                }
-            });
+            const flat=_flattenLessons(c.modules);
+            const prog=_progressStore.get(cid);
+            const total=flat.length; const completed=prog.completedLessons.length;
+            const pct=total?Math.round((completed/total)*100):0;
 
-            if (_courseEditingId) {
-                const c = _coursesCache.find(x => x.id === _courseEditingId);
-                if (c) {
-                    c.title = title; c.desc = desc; c.cat = cat; c.color = color; c.lessons = lessons;
-                }
-            } else {
-                _coursesCache.unshift({
-                    id: 'c_' + Date.now(),
-                    title: title, desc: desc, cat: cat, color: color, lessons: lessons
-                });
+            document.getElementById('player-course-name').textContent=c.title;
+            document.getElementById('player-prog-count').textContent=completed+'/'+total+' Completed';
+            document.getElementById('player-prog-fill').style.width=pct+'%';
+            document.getElementById('player-prog-fill').style.background=c.color||'var(--primary)';
+
+            if(lid)this._loadLesson(lid);
+            this._renderPlayerPlaylist(c,prog,flat);
+        },
+
+        _loadLesson(lid){
+            const c=_courseStore.getById(_activeCourseId); if(!c)return;
+            const ctx=_findLessonContext(_activeCourseId,lid); if(!ctx){showToast('Lesson not found.','error');return;}
+            _activeLessonId=lid;
+            _progressStore.setCurrentLesson(_activeCourseId,lid);
+            const l=ctx.lesson;
+
+            const embedUrl=_videoValidator.getEmbedUrl(l.videoSource);
+            const player=document.getElementById('player-video-wrap');
+            if(embedUrl){
+                player.innerHTML=`<iframe src="${_escHtml(embedUrl)}" allowfullscreen allow="autoplay;encrypted-media" frameborder="0"></iframe>`;
+            }else{
+                player.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:300px;color:var(--text3);"><i class="fas fa-video" style="font-size:2.5rem;opacity:0.3;margin-bottom:12px;"></i><p>No video attached yet.</p></div>`;
             }
 
-            _saveCourses();
-            this.closeModal();
-            this.renderTabs();
-            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
-            showToast('✅ Course saved successfully.', 'success');
+            document.getElementById('player-lesson-title').textContent='Lesson '+(ctx.index+1)+' — '+l.title;
+            document.getElementById('player-lesson-desc').textContent=l.description||'Watch the lesson video and review attached resources.';
+
+            const isDone=prog.completedLessons.includes(lid);
+            const markBtn=document.getElementById('player-mark-btn');
+            markBtn.disabled=false;
+            markBtn.innerHTML=isDone?'<i class="fas fa-check"></i> Completed':'<i class="fas fa-check-circle"></i> Mark as Completed';
+            markBtn.className=isDone?'cpv-mark-btn completed':'cpv-mark-btn';
+            markBtn.onclick=()=>this.markCompleted(lid);
+
+            const prevBtn=document.getElementById('player-prev-btn');
+            const nextBtn=document.getElementById('player-next-btn');
+            prevBtn.disabled=!ctx.prev;
+            prevBtn.onclick=ctx.prev?()=>this.openPlayer(_activeCourseId,ctx.prev.id):null;
+            nextBtn.disabled=!ctx.next;
+            nextBtn.onclick=ctx.next?()=>this.openPlayer(_activeCourseId,ctx.next.id):null;
+
+            let resHtml='';
+            (l.resources||[]).forEach(r=>{
+                resHtml+=`<div class="cpv-res-card cpv-res-${r.type||'pdf'}">
+                    <div class="cpv-res-ico">${r.type==='pdf'?'📄':r.type==='link'?'🔗':'📎'}</div>
+                    <div class="cpv-res-info"><div class="cpv-res-type">${_escHtml(r.title||'Resource')}</div><div class="cpv-res-sub">${_escHtml(r.type||'pdf').toUpperCase()}</div></div>
+                    <div class="cpv-res-actions">
+                        ${r.url?`<button class="cpv-res-btn cpv-res-open" onclick="window.open('${_escHtml(r.url)}','_blank')"><i class="fas fa-external-link-alt"></i> Open</button>`:''}
+                        ${r.url&&r.downloadEnabled!==false&&_courseAuth.canDownload(_activeCourseId)?`<button class="cpv-res-btn cpv-res-dl" onclick="EduAI.Courses._downloadResource('${_escHtml(r.url)}','${_escHtml(r.title||'resource')}')"><i class="fas fa-download"></i> Download</button>`:''}
+                    </div>
+                </div>`;
+            });
+            document.getElementById('player-resources').innerHTML=resHtml||
+                `<div class="cpv-res-card"><div class="cpv-res-ico">🎥</div><div class="cpv-res-info"><div class="cpv-res-type">Video Lesson</div><div class="cpv-res-sub">Watch the video above</div></div></div>`;
+
+            this._renderPlayerPlaylist(c,prog,_flattenLessons(c.modules));
         },
 
-        deleteCourse: function(id) {
-            if (!EduAI.RBAC.isAdmin()) { showToast('⛔ Admins only — students cannot delete courses.', 'error', 3500); return; }
-            if (!confirm('Are you sure you want to delete this course?')) return;
-            _coursesCache = _coursesCache.filter(c => c.id !== id);
-            _saveCourses();
-            this.renderTabs();
-            this.renderGrid(document.querySelector('.cft-pill.active')?.dataset.cat || 'all');
-            showToast('🗑️ Course deleted.', 'success');
+        _renderPlayerPlaylist(c,prog,flat){
+            const body=document.getElementById('player-playlist-body'); if(!body)return;
+            let html='';
+            let modIdx=0;
+            (c.modules||[]).forEach((m,mi)=>{
+                html+=`<div class="crs-pl-module"><div class="crs-pl-mod-title"><span>Module ${mi+1}: ${_escHtml(m.title)}</span></div>`;
+                (m.lessons||[]).forEach((l,li)=>{
+                    const isDone=prog.completedLessons.includes(l.id);
+                    const isActive=l.id===_activeLessonId;
+                    html+=`<div class="cpv-lesson ${isActive?'active':''} ${isDone?'done':''}" onclick="EduAI.Courses.openPlayer('${c.id}','${l.id}')">
+                        <div class="cpv-lesson-num">${isDone?'<i class="fas fa-check"></i>':(modIdx+1)}</div>
+                        <div class="cpv-lesson-info"><div class="cpv-lesson-name">${_escHtml(l.title)}</div><div class="cpv-lesson-dur"><i class="far fa-clock"></i> ${_escHtml(l.duration||'10:00')}</div></div>
+                        <i class="fas fa-check-circle cpv-check"></i>
+                    </div>`;
+                    modIdx++;
+                });
+                html+=`</div>`;
+            });
+            body.innerHTML=html;
+        },
+
+        markCompleted(lid){
+            _progressStore.markLessonComplete(_activeCourseId,lid);
+            const prog=_progressStore.get(_activeCourseId);
+            const c=_courseStore.getById(_activeCourseId);
+            const total=_countLessons(c.modules);
+            if(prog.completedLessons.length>=total){
+                _analyticsStore.track(_activeCourseId,'course_complete',{});
+                showToast('🎉 Congratulations! Course completed!','success',4000);
+            }else{
+                showToast('✅ Lesson marked as completed.','success');
+            }
+            this._loadLesson(lid);
+        },
+
+        _downloadResource(url,name){
+            const a=document.createElement('a'); a.href=url; a.download=name; a.target='_blank';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            showToast('📥 Download started.','success');
+            _analyticsStore.track(_activeCourseId,'resource_download',{url,name});
+        },
+
+        // ── Course Builder (Admin/Manager) ───────────────────
+        openBuilder(cid){
+            const c=_courseStore.getById(cid); if(!c)return;
+            if(!_courseAuth.canUpdate(cid)){showToast('⛔ Permission denied.','error');return;}
+            _activeCourseId=cid; this._showView('builder');
+            this._renderBuilder(c);
+        },
+
+        _renderBuilder(c){
+            const el=document.getElementById('courses-builder-view'); if(!el)return;
+            const canPub=_courseAuth.canPublish(c.id);
+            const canMod=_courseAuth.canManageModules(c.id);
+            const canLes=_courseAuth.canManageLessons(c.id);
+
+            let modulesHtml='';
+            (c.modules||[]).forEach((m,mi)=>{
+                const expanded=_builderModuleExpanded[m.id]!==false;
+                let lessonsHtml='';
+                (m.lessons||[]).forEach((l,li)=>{
+                    lessonsHtml+=`<div class="bld-lesson">
+                        <div class="bld-les-drag"><i class="fas fa-grip-vertical"></i></div>
+                        <div class="bld-les-info">
+                            <div class="bld-les-title">${_escHtml(l.title)}</div>
+                            <div class="bld-les-meta">${_escHtml(l.duration||'10:00')} · ${l.videoSource&&l.videoSource.url?'<i class="fas fa-video" style="color:#22c55e"></i> Has Video':'<i class="fas fa-video" style="color:var(--text3)"></i> No Video'} · ${(l.resources||[]).length} Resources</div>
+                        </div>
+                        ${canLes?`<div class="bld-les-actions">
+                            <button class="bld-act" onclick="EduAI.Courses._moveLesson('${c.id}','${m.id}','${l.id}',-1)" title="Move Up"><i class="fas fa-arrow-up"></i></button>
+                            <button class="bld-act" onclick="EduAI.Courses._moveLesson('${c.id}','${m.id}','${l.id}',1)" title="Move Down"><i class="fas fa-arrow-down"></i></button>
+                            <button class="bld-act bld-edit" onclick="EduAI.Courses._editLesson('${c.id}','${m.id}','${l.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="bld-act bld-dup" onclick="EduAI.Courses._duplicateLesson('${c.id}','${m.id}','${l.id}')" title="Duplicate"><i class="fas fa-copy"></i></button>
+                            <button class="bld-act bld-del" onclick="EduAI.Courses._deleteLesson('${c.id}','${m.id}','${l.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>`:''}
+                    </div>`;
+                });
+
+                modulesHtml+=`<div class="bld-module ${expanded?'expanded':''}">
+                    <div class="bld-mod-header">
+                        <div class="bld-mod-toggle" onclick="EduAI.Courses._toggleModule('${m.id}')"><i class="fas fa-chevron-${expanded?'down':'right'}"></i></div>
+                        <div class="bld-mod-num">Module ${mi+1}</div>
+                        <input class="bld-mod-title-inp" value="${_escHtml(m.title)}" onchange="EduAI.Courses._renameModule('${c.id}','${m.id}',this.value)" ${canMod?'':'disabled'}>
+                        ${canMod?`<div class="bld-mod-actions">
+                            <button class="bld-act" onclick="EduAI.Courses._moveModule('${c.id}','${m.id}',-1)" title="Move Up"><i class="fas fa-arrow-up"></i></button>
+                            <button class="bld-act" onclick="EduAI.Courses._moveModule('${c.id}','${m.id}',1)" title="Move Down"><i class="fas fa-arrow-down"></i></button>
+                            <button class="bld-act bld-del" onclick="EduAI.Courses._deleteModule('${c.id}','${m.id}')" title="Delete Module"><i class="fas fa-trash"></i></button>
+                        </div>`:''}
+                    </div>
+                    <div class="bld-mod-lessons">${lessonsHtml||'<div style="padding:12px 16px;color:var(--text3);font-size:0.82rem;">No lessons yet.</div>'}</div>
+                    ${canLes?`<button class="bld-add-lesson-btn" onclick="EduAI.Courses._addLesson('${c.id}','${m.id}')"><i class="fas fa-plus"></i> Add Lesson</button>`:''}
+                </div>`;
+            });
+
+            el.innerHTML=`
+                <div class="bld-topbar">
+                    <button class="cpv-back" onclick="EduAI.Courses._showView('catalog');EduAI.Courses.renderCatalog();"><i class="fas fa-arrow-left"></i> Back</button>
+                    <div class="bld-topbar-info">
+                        <h2>${_escHtml(c.title)}</h2>
+                        <span class="bld-status-badge bld-status-${c.status}">${c.status||'draft'}</span>
+                    </div>
+                    <div class="bld-topbar-actions">
+                        ${canPub?(c.status==='published'?`<button class="bld-action-btn bld-unpub" onclick="EduAI.Courses.unpublishCourse('${c.id}')"><i class="fas fa-eye-slash"></i> Unpublish</button>`:`<button class="bld-action-btn bld-pub" onclick="EduAI.Courses.publishCourse('${c.id}')"><i class="fas fa-eye"></i> Publish</button>`):''}
+                        <button class="bld-action-btn" onclick="EduAI.Courses._editCourseInfo('${c.id}')"><i class="fas fa-edit"></i> Edit Info</button>
+                    </div>
+                </div>
+                <div class="bld-body">
+                    <div class="bld-modules">${modulesHtml||'<div style="text-align:center;padding:60px;color:var(--text3);"><i class="fas fa-layer-group" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px;"></i>No modules yet. Add one to start building your course.</div>'}</div>
+                    ${canMod?`<button class="bld-add-module-btn" onclick="EduAI.Courses._addModule('${c.id}')"><i class="fas fa-plus"></i> Add Module</button>`:''}
+                </div>`;
+        },
+
+        _toggleModule(mid){_builderModuleExpanded[mid]=!_builderModuleExpanded[mid];const c=_courseStore.getById(_activeCourseId);if(c)this._renderBuilder(c);},
+        _addModule(cid){const m=_courseBuilder.addModule(cid);if(m){_builderModuleExpanded[m.id]=true;this._renderBuilder(_courseStore.getById(cid));showToast('✅ Module added.','success');}},
+        _renameModule(cid,mid,val){_courseBuilder.updateModule(cid,mid,{title:val});},
+        _deleteModule(cid,mid){if(!confirm('Delete this module and all its lessons?'))return;_courseBuilder.deleteModule(cid,mid);this._renderBuilder(_courseStore.getById(cid));showToast('🗑️ Module deleted.','success');},
+        _moveModule(cid,mid,dir){_courseBuilder.moveModule(cid,mid,dir);this._renderBuilder(_courseStore.getById(cid));},
+        _addLesson(cid,mid){const l=_courseBuilder.addLesson(cid,mid,{title:'New Lesson'});if(l)this._openLessonEditor(cid,mid,l.id);},
+        _editLesson(cid,mid,lid){this._openLessonEditor(cid,mid,lid);},
+        _deleteLesson(cid,mid,lid){if(!confirm('Delete this lesson?'))return;_courseBuilder.deleteLesson(cid,mid,lid);this._renderBuilder(_courseStore.getById(cid));showToast('🗑️ Lesson deleted.','success');},
+        _moveLesson(cid,mid,lid,dir){_courseBuilder.moveLesson(cid,mid,lid,dir);this._renderBuilder(_courseStore.getById(cid));},
+        _duplicateLesson(cid,mid,lid){_courseBuilder.duplicateLesson(cid,mid,lid);this._renderBuilder(_courseStore.getById(cid));showToast('✅ Lesson duplicated.','success');},
+
+        _openLessonEditor(cid,mid,lid){
+            const c=_courseStore.getById(cid); if(!c)return;
+            const m=c.modules.find(x=>x.id===mid); if(!m)return;
+            const l=m.lessons.find(x=>x.id===lid); if(!l)return;
+            const modal=document.getElementById('courses-modal-overlay');
+            if(!modal)return;
+            const vr=l.videoSource||{type:'external',url:''};
+            let resHtml='';
+            (l.resources||[]).forEach((r,i)=>{
+                resHtml+=`<div class="bld-res-row">
+                    <input class="bld-res-inp" value="${_escHtml(r.title)}" placeholder="Title" onchange="EduAI.Courses._updateRes('${cid}','${mid}','${lid}','${r.id}','title',this.value)">
+                    <input class="bld-res-inp" value="${_escHtml(r.url)}" placeholder="URL" onchange="EduAI.Courses._updateRes('${cid}','${mid}','${lid}','${r.id}','url',this.value)">
+                    <button class="bld-act bld-del" onclick="EduAI.Courses._deleteRes('${cid}','${mid}','${lid}','${r.id}')"><i class="fas fa-trash"></i></button>
+                </div>`;
+            });
+            modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
+                <div class="bld-modal-header"><h3>Edit Lesson</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
+                <div class="bld-modal-body">
+                    <div class="bld-field"><label>Title</label><input class="bld-inp" id="bld-les-title" value="${_escHtml(l.title)}"></div>
+                    <div class="bld-field"><label>Description</label><textarea class="bld-ta" id="bld-les-desc">${_escHtml(l.description||'')}</textarea></div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Duration</label><input class="bld-inp" id="bld-les-dur" value="${_escHtml(l.duration||'10:00')}" placeholder="mm:ss"></div>
+                        <div class="bld-field"><label>Video Type</label><select class="bld-sel" id="bld-les-vtype">
+                            <option value="youtube" ${vr.type==='youtube'?'selected':''}>YouTube</option>
+                            <option value="direct" ${vr.type==='direct'?'selected':''}>Direct Video</option>
+                            <option value="external" ${vr.type==='external'?'selected':''}>External URL</option>
+                        </select></div>
+                    </div>
+                    <div class="bld-field"><label>Video URL</label><input class="bld-inp" id="bld-les-vurl" value="${_escHtml(vr.url||'')}" placeholder="https://..."></div>
+                    <div class="bld-field"><label>Resources</label>
+                        <div id="bld-res-list">${resHtml||'<div style="color:var(--text3);font-size:0.82rem;padding:8px 0;">No resources yet.</div>'}</div>
+                        <button class="bld-add-res-btn" onclick="EduAI.Courses._addRes('${cid}','${mid}','${lid}')"><i class="fas fa-plus"></i> Add Resource</button>
+                    </div>
+                </div>
+                <div class="bld-modal-footer">
+                    <button class="bld-cancel-btn" onclick="EduAI.Courses._closeModal()">Cancel</button>
+                    <button class="bld-save-btn" onclick="EduAI.Courses._saveLesson('${cid}','${mid}','${lid}')"><i class="fas fa-save"></i> Save Lesson</button>
+                </div>
+            </div>`;
+            modal.classList.add('open');
+        },
+
+        _saveLesson(cid,mid,lid){
+            const title=document.getElementById('bld-les-title').value.trim();
+            const description=document.getElementById('bld-les-desc').value.trim();
+            const duration=document.getElementById('bld-les-dur').value.trim();
+            const vtype=document.getElementById('bld-les-vtype').value;
+            const vurl=document.getElementById('bld-les-vurl').value.trim();
+            if(!title){showToast('Title is required.','error');return;}
+            if(vurl){
+                const vresult=_videoValidator.validate({url:vurl});
+                if(!vresult.valid){showToast('⚠️ Invalid video URL: '+vresult.error,'error');return;}
+            }
+            const vs=_videoValidator.normalize({type:vtype,url:vurl});
+            _courseBuilder.updateLesson(cid,mid,lid,{title,description,duration:duration||'10:00',videoSource:vs,updatedAt:new Date().toISOString()});
+            this._closeModal();
+            this._renderBuilder(_courseStore.getById(cid));
+            showToast('✅ Lesson saved.','success');
+        },
+
+        _addRes(cid,mid,lid){
+            const r=_courseBuilder.addResource(cid,mid,lid,{title:'New Resource',type:'pdf',url:''});
+            if(r)this._openLessonEditor(cid,mid,lid);
+        },
+        _updateRes(cid,mid,lid,rid,field,val){
+            const c=_courseStore.getById(cid);if(!c)return;
+            const m=c.modules.find(x=>x.id===mid);if(!m)return;
+            const l=m.lessons.find(x=>x.id===lid);if(!l||!l.resources)return;
+            const r=l.resources.find(x=>x.id===rid);if(r){r[field]=val;_courseStore.update(cid,{modules:c.modules});}
+        },
+        _deleteRes(cid,mid,lid,rid){
+            if(!confirm('Delete this resource?'))return;
+            _courseBuilder.deleteResource(cid,mid,lid,rid);
+            this._openLessonEditor(cid,mid,lid);
+        },
+
+        _closeModal(){
+            const modal=document.getElementById('courses-modal-overlay');
+            if(modal){modal.classList.remove('open');modal.innerHTML='';}
+        },
+
+        // ── Edit Course Info ──────────────────────────────────
+        _editCourseInfo(cid){
+            const c=_courseStore.getById(cid); if(!c)return;
+            const modal=document.getElementById('courses-modal-overlay'); if(!modal)return;
+            let catOpts=COURSE_CATEGORIES.map(cat=>`<option value="${cat}" ${c.category===cat?'selected':''}>${cat}</option>`).join('');
+            let lvlOpts=COURSE_LEVELS.map(l=>`<option value="${l}" ${c.level===l?'selected':''}>${l}</option>`).join('');
+            let langOpts=COURSE_LANGUAGES.map(l=>`<option value="${l}" ${c.language===l?'selected':''}>${l}</option>`).join('');
+            modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
+                <div class="bld-modal-header"><h3>Edit Course Info</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
+                <div class="bld-modal-body">
+                    <div class="bld-field"><label>Course Title</label><input class="bld-inp" id="eci-title" value="${_escHtml(c.title)}"></div>
+                    <div class="bld-field"><label>Short Description</label><input class="bld-inp" id="eci-short" value="${_escHtml(c.shortDescription||'')}"></div>
+                    <div class="bld-field"><label>Full Description</label><textarea class="bld-ta" id="eci-desc">${_escHtml(c.description||'')}</textarea></div>
+                    <div class="bld-field"><label>Instructor</label><input class="bld-inp" id="eci-instructor" value="${_escHtml(c.instructor||'')}"></div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Category</label><select class="bld-sel" id="eci-cat">${catOpts}</select></div>
+                        <div class="bld-field"><label>Level</label><select class="bld-sel" id="eci-level">${lvlOpts}</select></div>
+                    </div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Language</label><select class="bld-sel" id="eci-lang">${langOpts}</select></div>
+                        <div class="bld-field"><label>Color</label><div class="cc-swatches">${['#6c63ff','#ef4444','#10b981','#f59e0b','#ec4899','#3b82f6'].map(cl=>`<div class="cc-swatch ${c.color===cl?'picked':''}" style="background:${cl}" data-c="${cl}" onclick="document.querySelectorAll('#courses-modal-overlay .cc-swatch').forEach(s=>s.classList.remove('picked'));this.classList.add('picked');"></div>`).join('')}</div></div>
+                    </div>
+                    <div class="bld-field"><label>Thumbnail URL</label><input class="bld-inp" id="eci-thumb" value="${_escHtml(c.thumbnail||'')}" placeholder="https://..."></div>
+                    <div class="bld-field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" id="eci-dl" ${c.downloadEnabled?'checked':''} style="width:auto"> Allow Downloads
+                    </label></div>
+                </div>
+                <div class="bld-modal-footer">
+                    <button class="bld-cancel-btn" onclick="EduAI.Courses._closeModal()">Cancel</button>
+                    <button class="bld-save-btn" onclick="EduAI.Courses._saveCourseInfo('${cid}')"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </div>`;
+            modal.classList.add('open');
+        },
+
+        _saveCourseInfo(cid){
+            const title=document.getElementById('eci-title').value.trim();
+            if(!title){showToast('Title required.','error');return;}
+            const color=document.querySelector('#courses-modal-overlay .cc-swatch.picked')?.dataset.c||'#6c63ff';
+            _courseStore.update(cid,{
+                title, shortDescription:document.getElementById('eci-short').value.trim(),
+                description:document.getElementById('eci-desc').value.trim(),
+                instructor:document.getElementById('eci-instructor').value.trim(),
+                category:document.getElementById('eci-cat').value,
+                level:document.getElementById('eci-level').value,
+                language:document.getElementById('eci-lang').value,
+                thumbnail:document.getElementById('eci-thumb').value.trim(),
+                color, downloadEnabled:document.getElementById('eci-dl').checked
+            });
+            this._closeModal();
+            this._renderBuilder(_courseStore.getById(cid));
+            showToast('✅ Course info updated.','success');
+        },
+
+        // ── Management Actions ────────────────────────────────
+        publishCourse(cid){
+            if(!_courseAuth.canPublish(cid)){showToast('⛔ Permission denied.','error');return;}
+            _courseStore.publish(cid); this.renderCatalog();
+            showToast('✅ Course published.','success');
+        },
+        unpublishCourse(cid){
+            if(!_courseAuth.canPublish(cid)){showToast('⛔ Permission denied.','error');return;}
+            _courseStore.unpublish(cid); this.renderCatalog();
+            showToast('📋 Course moved to draft.','success');
+        },
+        archiveCourse(cid){
+            if(!_courseAuth.canPublish(cid)){showToast('⛔ Permission denied.','error');return;}
+            if(!confirm('Archive this course?'))return;
+            _courseStore.archive(cid); this.renderCatalog();
+            showToast('📦 Course archived.','success');
+        },
+        duplicateCourse(cid){
+            if(!_courseAuth.canUpdate(cid)){showToast('⛔ Permission denied.','error');return;}
+            const dup=_courseStore.duplicate(cid);
+            if(dup){this.renderCatalog();showToast('✅ Course duplicated.','success');}
+        },
+        restoreCourse(cid){
+            if(!EduAI.RBAC.isAdmin()){showToast('⛔ Admins only.','error');return;}
+            _courseStore.restore(cid); this.renderCatalog();
+            showToast('✅ Course restored.','success');
+        },
+        deleteCourse(cid){
+            if(!_courseAuth.canDelete(cid)){showToast('⛔ Permission denied.','error');return;}
+            if(!confirm('Are you sure you want to delete this course?'))return;
+            _courseStore.softDelete(cid); this.renderCatalog();
+            showToast('🗑️ Course deleted.','success');
+        },
+
+        // ── Permissions Modal (Admin) ────────────────────────
+        openPermissions(cid){
+            if(!EduAI.RBAC.isAdmin()){showToast('⛔ Admins only.','error');return;}
+            const c=_courseStore.getById(cid); if(!c)return;
+            const managers=_courseAuth.getAllManagers();
+            const modal=document.getElementById('courses-modal-overlay'); if(!modal)return;
+            let rows='';
+            managers.forEach(mg=>{
+                const perms=_courseAuth.getManagerPermissions(mg.email);
+                const access=_courseAuth.getManagerCourseAccess(mg.email);
+                const hasAccess=access.length===0||access.includes(cid);
+                rows+=`<div class="perm-manager-row">
+                    <div class="perm-mgr-info"><strong>${_escHtml(mg.name||mg.email)}</strong><span>${_escHtml(mg.email)}</span></div>
+                    <div class="perm-checkboxes">
+                        ${ COURSE_PERMISSIONS.map(p=>`<label class="perm-cb"><input type="checkbox" data-email="${_escHtml(mg.email)}" data-perm="${p}" ${perms.includes(p)?'checked':''}> <span>${p.replace('courses.','')}</span></label>`).join('')}
+                        <label class="perm-cb"><input type="checkbox" data-email="${_escHtml(mg.email)}" data-course-access="${cid}" ${hasAccess?'checked':''}> <span>course_access</span></label>
+                    </div>
+                </div>`;
+            });
+            modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
+                <div class="bld-modal-header"><h3>Manager Permissions — ${_escHtml(c.title)}</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
+                <div class="bld-modal-body">
+                    ${managers.length?rows:'<p style="color:var(--text3);text-align:center;padding:24px;">No managers registered. Promote users to Manager role from the Admin Panel.</p>'}
+                </div>
+                <div class="bld-modal-footer">
+                    <button class="bld-cancel-btn" onclick="EduAI.Courses._closeModal()">Cancel</button>
+                    ${managers.length?`<button class="bld-save-btn" onclick="EduAI.Courses._savePermissions('${cid}')"><i class="fas fa-save"></i> Save Permissions</button>`:''}
+                </div>
+            </div>`;
+            modal.classList.add('open');
+        },
+
+        _savePermissions(cid){
+            const checkboxes=document.querySelectorAll('#courses-modal-overlay input[data-email]');
+            const mgrPerms={};
+            const mgrAccess={};
+            checkboxes.forEach(cb=>{
+                const email=cb.dataset.email;
+                if(!mgrPerms[email])mgrPerms[email]=[];
+                if(!mgrAccess[email])mgrAccess[email]=[];
+                if(cb.dataset.perm){
+                    if(cb.checked)mgrPerms[email].push(cb.dataset.perm);
+                }else if(cb.dataset.courseAccess){
+                    if(cb.checked)mgrAccess[email].push(cb.dataset.courseAccess);
+                }
+            });
+            Object.keys(mgrPerms).forEach(email=>{
+                _courseAuth.setManagerPermissions(email,mgrPerms[email]);
+                _courseAuth.setManagerCourseAccess(email,mgrAccess[email]||[]);
+            });
+            _courseAudit.log('manager_permissions_changed',cid,'permissions',{managers:Object.keys(mgrPerms)});
+            this._closeModal(); showToast('✅ Permissions saved.','success');
+        },
+
+        // ── Analytics Modal ───────────────────────────────────
+        openAnalytics(cid){
+            if(!_courseAuth.canViewAnalytics(cid)){showToast('⛔ Permission denied.','error');return;}
+            const c=_courseStore.getById(cid); if(!c)return;
+            const stats=_analyticsStore.getCourseStats(cid);
+            const flat=_flattenLessons(c.modules);
+            const totalStudents=JSON.parse(localStorage.getItem('eduai_users')||'[]').filter(u=>(u.role||'student')==='student').length;
+            const modal=document.getElementById('courses-modal-overlay'); if(!modal)return;
+            let eventsHtml='';
+            (stats.events||[]).slice(0,20).forEach(ev=>{
+                const actionLabels={course_view:'Viewed',course_start:'Started',lesson_complete:'Completed Lesson',course_complete:'Completed Course',resource_download:'Downloaded Resource'};
+                eventsHtml+=`<div class="analytics-event"><span class="ae-action">${actionLabels[ev.event]||ev.event}</span><span class="ae-user">${_escHtml(ev.user||'')}</span><span class="ae-time">${new Date(ev.timestamp).toLocaleString()}</span></div>`;
+            });
+            modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
+                <div class="bld-modal-header"><h3>Analytics — ${_escHtml(c.title)}</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
+                <div class="bld-modal-body">
+                    <div class="analytics-cards">
+                        <div class="analytics-stat-card"><div class="asc-icon" style="background:rgba(108,99,255,0.15);color:#6c63ff"><i class="fas fa-eye"></i></div><div class="asc-num">${stats.views}</div><div class="asc-label">Total Views</div></div>
+                        <div class="analytics-stat-card"><div class="asc-icon" style="background:rgba(34,197,94,0.15);color:#22c55e"><i class="fas fa-play"></i></div><div class="asc-num">${stats.starts}</div><div class="asc-label">Course Starts</div></div>
+                        <div class="analytics-stat-card"><div class="asc-icon" style="background:rgba(247,147,30,0.15);color:#f7931e"><i class="fas fa-check-double"></i></div><div class="asc-num">${stats.completions}</div><div class="asc-label">Completions</div></div>
+                        <div class="analytics-stat-card"><div class="asc-icon" style="background:rgba(239,68,68,0.15);color:#ef4444"><i class="fas fa-list"></i></div><div class="asc-num">${flat.length}</div><div class="asc-label">Total Lessons</div></div>
+                    </div>
+                    <h4 style="margin:20px 0 10px;font-size:0.9rem;color:var(--text)">Recent Activity</h4>
+                    <div class="analytics-events">${eventsHtml||'<div style="text-align:center;color:var(--text3);padding:16px;">No activity recorded yet.</div>'}</div>
+                </div>
+                <div class="bld-modal-footer"><button class="bld-cancel-btn" onclick="EduAI.Courses._closeModal()">Close</button></div>
+            </div>`;
+            modal.classList.add('open');
+        },
+
+        // ── Audit Log Modal ───────────────────────────────────
+        openAuditLog(cid){
+            if(!EduAI.RBAC.isAdmin()&&(!_courseAuth.canViewAnalytics(cid))){showToast('⛔ Permission denied.','error');return;}
+            const logs=cid?_courseAudit.getForCourse(cid):_courseAudit.getAll();
+            const modal=document.getElementById('courses-modal-overlay'); if(!modal)return;
+            let logHtml='';
+            logs.slice(0,50).forEach(e=>{
+                logHtml+=`<div class="audit-row"><span class="ar-action">${_escHtml(e.action)}</span><span class="ar-user">${_escHtml(e.userName||e.user)}</span><span class="ar-role">${_escHtml(e.role)}</span><span class="ar-resource">${_escHtml(e.resourceName||'')}</span><span class="ar-time">${new Date(e.timestamp).toLocaleString()}</span></div>`;
+            });
+            modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
+                <div class="bld-modal-header"><h3>Audit Log</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
+                <div class="bld-modal-body">
+                    <div class="audit-log-list">${logHtml||'<div style="text-align:center;color:var(--text3);padding:24px;">No audit entries.</div>'}</div>
+                </div>
+                <div class="bld-modal-footer">
+                    <button class="bld-cancel-btn" onclick="EduAI.Courses._closeModal()">Close</button>
+                    ${EduAI.RBAC.isAdmin()?`<button class="bld-save-btn" style="background:var(--danger)" onclick="if(confirm('Clear all audit logs?')){_courseAudit.clear();EduAI.Courses._closeModal();showToast('🗑️ Audit log cleared.','success');}"><i class="fas fa-trash"></i> Clear Log</button>`:''}
+                </div>
+            </div>`;
+            modal.classList.add('open');
+        },
+
+        // ── Open Create Course (enhanced) ─────────────────────
+        openCreateModal(){
+            if(!_courseAuth.canCreate()){showToast('⛔ Permission denied.','error');return;}
+            _courseEditingId=null;
+            const modal=document.getElementById('courses-modal-overlay'); if(!modal)return;
+            let catOpts=COURSE_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('');
+            let lvlOpts=COURSE_LEVELS.map(l=>`<option value="${l}">${l}</option>`).join('');
+            let langOpts=COURSE_LANGUAGES.map(l=>`<option value="${l}">${l}</option>`).join('');
+            modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
+                <div class="bld-modal-header"><h3>Create New Course</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
+                <div class="bld-modal-body">
+                    <div class="bld-field"><label>Course Title *</label><input class="bld-inp" id="eci-title" placeholder="e.g. Advanced JavaScript Mastery"></div>
+                    <div class="bld-field"><label>Short Description</label><input class="bld-inp" id="eci-short" placeholder="Brief course description"></div>
+                    <div class="bld-field"><label>Full Description</label><textarea class="bld-ta" id="eci-desc" placeholder="Detailed course description"></textarea></div>
+                    <div class="bld-field"><label>Instructor</label><input class="bld-inp" id="eci-instructor" value="${_escHtml((EduAI.RBAC.getUser()||{}).name||'')}"></div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Category</label><select class="bld-sel" id="eci-cat">${catOpts}</select></div>
+                        <div class="bld-field"><label>Level</label><select class="bld-sel" id="eci-level">${lvlOpts}</select></div>
+                    </div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Language</label><select class="bld-sel" id="eci-lang">${langOpts}</select></div>
+                        <div class="bld-field"><label>Color</label><div class="cc-swatches">${['#6c63ff','#ef4444','#10b981','#f59e0b','#ec4899','#3b82f6'].map((cl,i)=>`<div class="cc-swatch ${i===0?'picked':''}" style="background:${cl}" data-c="${cl}" onclick="document.querySelectorAll('#courses-modal-overlay .cc-swatch').forEach(s=>s.classList.remove('picked'));this.classList.add('picked');"></div>`).join('')}</div></div>
+                    </div>
+                </div>
+                <div class="bld-modal-footer">
+                    <button class="bld-cancel-btn" onclick="EduAI.Courses._closeModal()">Cancel</button>
+                    <button class="bld-save-btn" onclick="EduAI.Courses._submitCreateCourse()"><i class="fas fa-save"></i> Create Course</button>
+                </div>
+            </div>`;
+            modal.classList.add('open');
+        },
+
+        _submitCreateCourse(){
+            const title=document.getElementById('eci-title').value.trim();
+            if(!title){showToast('Course title is required.','error');return;}
+            const color=document.querySelector('#courses-modal-overlay .cc-swatch.picked')?.dataset.c||'#6c63ff';
+            const c=_courseStore.create({
+                title, shortDescription:document.getElementById('eci-short').value.trim(),
+                description:document.getElementById('eci-desc').value.trim(),
+                instructor:document.getElementById('eci-instructor').value.trim(),
+                category:document.getElementById('eci-cat').value,
+                level:document.getElementById('eci-level').value,
+                language:document.getElementById('eci-lang').value, color
+            });
+            this._closeModal();
+            if(c){this.renderCatalog();showToast('✅ Course created. Open the builder to add modules and lessons.','success',4000);}
         }
     };
 
 
-    // ── Init on DOMContentLoaded ──────────────────────────────
+// ── Init on DOMContentLoaded ──────────────────────────────
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', _inject);
     } else {
