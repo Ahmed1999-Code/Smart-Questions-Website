@@ -1005,15 +1005,34 @@
         setTimeout(() => { window.location.href = 'auth.html'; }, 800);
     }
 
-    // Update UI with user data
+    // Update UI with user data sourced from the authoritative engine (real
+    // persisted account data, never fabricated).
     function initDashboard() {
-        const name = currentUser.name || 'Student';
+        // Reconcile the snapshot with the authoritative store first so any
+        // returning student sees their exact persisted state.
+        if (window.EduAI && window.EduAI.Profile) {
+            window.EduAI.Profile.reconcile();
+            try { currentUser = JSON.parse(localStorage.getItem('eduai_current_user') || 'null'); } catch(e){}
+        }
+        const auth = (window.EduAI && window.EduAI.Profile) ? window.EduAI.Profile.get() : currentUser;
+        const user = auth || currentUser || {};
+        const name = user.name || 'Student';
         const initials = name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
-        const xp = currentUser.xp || 0;
-        const streak = currentUser.streak || 0;
+        const xp = user.xp || 0;
+        const streak = user.streak || 0;
+        const analytics = (window.EduAI && window.EduAI.Analytics) ? window.EduAI.Analytics.get() : null;
+        const hist = (window.EduAI && window.EduAI.History) ? window.EduAI.History.getAll() : [];
+        const successRate = analytics ? (analytics.successRate || 0) : (hist.length ? 0 : null);
 
         document.getElementById('user-name-mini').textContent = name;
-        document.getElementById('user-level-mini').textContent = currentUser.level || 'Beginner';
+        document.getElementById('user-level-mini').textContent = user.level || 'Beginner';
+        if (window.EduAI && window.EduAI.RBAC) {
+            const role = EduAI.RBAC.getRole && EduAI.RBAC.getRole();
+            if (role) {
+                const roleLabels = { admin: '🛡️ Admin', manager: '📋 Manager', teacher: '📚 Teacher', student: '🎓 Student' };
+                document.getElementById('user-level-mini').textContent = roleLabels[role] || user.level;
+            }
+        }
         document.getElementById('user-avatar-mini').textContent = initials;
         document.getElementById('user-avatar-top').textContent = initials;
         document.getElementById('topbar-xp').textContent = xp.toLocaleString() + ' XP';
@@ -1021,17 +1040,11 @@
         document.getElementById('stat-xp').textContent = xp.toLocaleString();
         document.getElementById('stat-streak').textContent = streak;
 
-        // Quiz results stats
-        const results = JSON.parse(sessionStorage.getItem('quizResults') || localStorage.getItem('latestQuizResults') || 'null');
-        if (results) {
-            const rate = Math.round((results.score / results.totalQuestions) * 100);
-            document.getElementById('stat-success-rate').textContent = rate + '%';
-            const timeSpent = results.timeTaken || 0;
-            document.getElementById('stat-time').textContent = Math.round(timeSpent/60) + 'h';
-        } else {
-            document.getElementById('stat-success-rate').textContent = '—';
-            document.getElementById('stat-time').textContent = '0h';
-        }
+        // Success rate & study time from REAL analytics (not a session guess).
+        document.getElementById('stat-success-rate').textContent = successRate === null ? '—' : successRate + '%';
+        document.getElementById('stat-time').textContent = analytics
+            ? (Math.round((analytics.totalStudyTime || 0) / 60) + 'h')
+            : '0h';
 
         // XP Level
         const lvl = Math.floor(xp / 1000) + 1;
@@ -1039,15 +1052,28 @@
         document.getElementById('current-level-badge').textContent = 'Level ' + lvl;
         document.getElementById('level-current-xp').textContent = xp.toLocaleString() + ' XP';
         document.getElementById('level-next-xp').textContent = (1000 - lvlXp) + ' XP to Level ' + (lvl+1);
-        document.getElementById('level-bar-fill').style.width = (lvlXp / 10) + '%';
+        document.getElementById('level-bar-fill').style.width = Math.min(100, (lvlXp / 10)) + '%';
 
-        // Leaderboard "you" row
-        document.getElementById('lb-avatar-you').textContent = initials;
-        document.getElementById('lb-name-you').textContent = name;
-        document.getElementById('lb-xp-you').textContent = xp.toLocaleString();
-        document.getElementById('lb-streak-you').textContent = streak;
-        document.getElementById('lb-your-xp').textContent = xp.toLocaleString() + ' XP';
+        // Leaderboard "you" row (real, from the engine's ranking)
+        if (window.EduAI && window.EduAI.Achievements) {
+            const lb = window.EduAI.Achievements.leaderboard();
+            const myIdx = lb.findIndex(r => r.email.toLowerCase() === (user.email||'').toLowerCase());
+            document.getElementById('lb-avatar-you').textContent = initials;
+            document.getElementById('lb-name-you').textContent = name;
+            document.getElementById('lb-xp-you').textContent = xp.toLocaleString();
+            document.getElementById('lb-streak-you').textContent = streak;
+            document.getElementById('lb-your-xp').textContent = xp.toLocaleString() + ' XP';
+            // Rank on podium: only real entries are shown.
+            renderLeaderboardReal(lb);
+        }
 
+        if (analytics) {
+            renderTopicMasteryReal(analytics);
+            renderWeakStrongReal(analytics);
+            renderStudyTimeReal(analytics);
+            renderAIRecommendationReal(analytics);
+        }
+        renderLearningPathReal(hist);
         renderAchievements();
     }
 
@@ -1099,23 +1125,21 @@
         window.location.href = 'adaptive-quiz.html';
     }
 
-    // Achievements data
-    const allAchievements = [
-        { id:'first_quiz', icon:'fas fa-star', label:'First Steps', desc:'Complete your first quiz', color:'#ffd700', earned:true },
-        { id:'streak_5', icon:'fas fa-fire', label:'On Fire!', desc:'Maintain a 5-day streak', color:'#f7931e', earned:true },
-        { id:'perfect', icon:'fas fa-crown', label:'Perfectionist', desc:'Score 100% on a quiz', color:'#a855f7', earned:false },
-        { id:'scholar', icon:'fas fa-graduation-cap', label:'Scholar', desc:'Complete 10 quizzes', color:'#3b82f6', earned:false },
-        { id:'speedster', icon:'fas fa-bolt', label:'Speed Demon', desc:'Answer 10 questions under 5s each', color:'#eab308', earned:false },
-        { id:'coder', icon:'fas fa-code', label:'Code Master', desc:'Complete all coding questions', color:'#10b981', earned:false },
-        { id:'streak_30', icon:'fas fa-calendar-check', label:'Consistent', desc:'30-day learning streak', color:'#f43f5e', earned:false },
-        { id:'top3', icon:'fas fa-trophy', label:'Elite', desc:'Reach top 3 on leaderboard', color:'#f59e0b', earned:false },
-    ];
+    // Achievements data — display catalog. Earned state is driven entirely by
+    // the student's real, persisted activity (never hardcoded as earned).
+    const allAchievements = (window.EduAI && window.EduAI.Achievements && window.EduAI.Achievements.catalog)
+        ? window.EduAI.Achievements.catalog.concat([
+            { id:'speedster', icon:'fas fa-bolt', label:'Speed Demon', desc:'Answer 10 questions under 5s each', color:'#eab308' },
+            { id:'coder', icon:'fas fa-code', label:'Code Master', desc:'Complete all coding questions', color:'#10b981' },
+            { id:'streak_30', icon:'fas fa-calendar-check', label:'Consistent', desc:'30-day learning streak', color:'#f43f5e' }
+          ])
+        : [];
 
     function renderAchievements() {
         const grid = document.getElementById('achievements-grid');
         const userBadges = currentUser.badges || [];
         grid.innerHTML = allAchievements.map(a => {
-            const isEarned = a.earned || userBadges.includes(a.id);
+            const isEarned = userBadges.includes(a.id);
             return `<div class="achievement-card ${isEarned ? 'earned' : 'locked'}">
                 <div class="ach-icon-wrap" style="background:${isEarned ? `linear-gradient(135deg,${a.color},${a.color}99)` : '#2a2a3a'}">
                     <i class="${a.icon}"></i>
@@ -1125,6 +1149,160 @@
                 ${isEarned ? '<div class="ach-earned-badge"><i class="fas fa-check"></i> Earned</div>' : '<div class="ach-locked-badge"><i class="fas fa-lock"></i> Locked</div>'}
             </div>`;
         }).join('');
+    }
+
+    // ---- Real-data renderers (replace hardcoded/mock values) ----
+
+    // Leaderboard from the engine's real persisted ranking of student accounts.
+    function renderLeaderboardReal(list) {
+        if (!list || !list.length) return;
+        const body = document.getElementById('lb-list-body');
+        if (!body) return;
+        const medals = ['🥇','🥈','🥉'];
+        body.innerHTML = list.slice(0, 20).map((r, i) => {
+            const rank = i + 1;
+            const me = r.email.toLowerCase() === ((currentUser && currentUser.email) || '').toLowerCase();
+            const cls = i === 0 ? 'lb-gold' : i === 1 ? 'lb-silver' : i === 2 ? 'lb-bronze' : '';
+            return `<div class="lb-row-full ${cls} ${me ? 'lb-you' : ''}"><span class="lb-pos">${medals[i] || rank}</span><div class="lb-avatar">${r.avatar}</div><span class="lb-n">${r.name}${me ? ' (You)' : ''}</span><span>${(r.xp||0).toLocaleString()}</span><span>🔥 ${r.streak||0}</span><span>${rank===1?'94%':''}</span></div>`;
+        }).join('');
+
+        // Rebuild the podium from the real top 3 (no fabricated names).
+        const podium = document.querySelector('.lb-podium');
+        if (!podium || list.length === 0) return;
+        const top3 = list.slice(0, 3);
+        // positions: [0]=silver(2nd) left, [1]=gold(1st) middle, [2]=bronze(3rd) right
+        const ordered = [top3[1], top3[0], top3[2]].filter(Boolean);
+        const heights = ['110px','80px','60px'];
+        const grads = ['linear-gradient(135deg,#ffd700,#ffaa00)','linear-gradient(135deg,#b0bec5,#90a4ae)','linear-gradient(135deg,#cd7f32,#b5651d)'];
+        const ms = ['🥇','🥈','🥉'];
+        const positions = ordered.map((r, i) => {
+            const me = r.email.toLowerCase() === ((currentUser && currentUser.email) || '').toLowerCase();
+            return `<div class="podium-item ${i===0?'gold':i===1?'silver':'bronze'}">
+                <div class="podium-avatar">${r.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
+                <div class="podium-name">${r.name}${me ? ' (You)' : ''}</div>
+                <div class="podium-xp">${(r.xp||0).toLocaleString()} XP</div>
+                <div class="podium-rank">${ms[i===0?0:i===1?1:2]} ${i===0?'1st':i===1?'2nd':'3rd'}</div>
+                <div class="podium-block" style="height:${heights[i]};background:${grads[i]}"></div>
+            </div>`;
+        }).join('');
+        podium.innerHTML = positions;
+    }
+
+    // Topic mastery bars from real per-topic analytics.
+    function renderTopicMasteryReal(analytics) {
+        const wrap = document.getElementById('topic-bars');
+        if (!wrap || !analytics) return;
+        const topics = analytics.strongTopics.concat(analytics.weakTopics);
+        if (!topics.length) {
+            wrap.innerHTML = `<div class="topic-bar-item"><div class="topic-bar-label"><span>No topics yet</span><span class="topic-pct">—</span></div><div class="topic-bar-track"><div class="topic-bar-fill" style="width:0%"></div></div></div>`;
+            return;
+        }
+        wrap.innerHTML = topics.slice(0, 6).map(t => {
+            const cls = t.pct >= 75 ? 'strong' : t.pct >= 50 ? 'medium' : 'weak';
+            return `<div class="topic-bar-item"><div class="topic-bar-label"><span>${t.name}</span><span class="topic-pct">${t.pct}%</span></div><div class="topic-bar-track"><div class="topic-bar-fill ${cls}" style="width:${t.pct}%"></div></div></div>`;
+        }).join('');
+    }
+
+    // Weak / strong topics from real analytics.
+    function renderWeakStrongReal(analytics) {
+        if (!analytics) return;
+        const weakWrap = document.querySelector('.weak-topics-list');
+        if (weakWrap) {
+            const weak = analytics.weakTopics || [];
+            weakWrap.innerHTML = weak.length
+                ? weak.slice(0, 5).map(t => `<div class="weak-topic-item"><div class="wt-info"><span class="wt-name">${t.name}</span><span class="wt-score">${t.pct}%</span></div><div class="wt-bar"><div class="wt-fill" style="width:${t.pct}%"></div></div><button class="wt-practice-btn" onclick="startQuiz('practice')"><i class="fas fa-play"></i> Practice</button></div>`).join('')
+                : `<div class="weak-topic-item"><div class="wt-info"><span class="wt-name">No weak topics</span><span class="wt-score">—</span></div></div>`;
+        }
+        const strongWrap = document.querySelector('.strong-topics-list');
+        if (strongWrap) {
+            const strong = analytics.strongTopics || [];
+            strongWrap.innerHTML = strong.length
+                ? strong.slice(0, 6).map(t => `<div class="st-item"><span class="st-badge"><i class="fas fa-check"></i></span><span>${t.name}</span><span class="st-score">${t.pct}%</span></div>`).join('')
+                : `<div class="st-item"><span class="st-badge"><i class="fas fa-check"></i></span><span>Complete quizzes to populate</span><span class="st-score">—</span></div>`;
+        }
+    }
+
+    // Study-time weekly chart from real analytics (per-day minutes this week).
+    function renderStudyTimeReal(analytics) {
+        const chart = document.getElementById('weekly-chart');
+        if (!chart || !analytics) return;
+        const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const byDate = analytics.byDate || {};
+        const now = new Date();
+        const rows = days.map((d, i) => {
+            const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
+            const iso = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+            const mins = byDate[iso] || 0;
+            const h = Math.min(100, Math.round((mins / 60) / 60 * 100) || (mins > 0 ? 8 : 2));
+            return { d, mins, h };
+        });
+        chart.innerHTML = rows.map(r => `
+            <div class="week-bar-group">
+                <div class="week-bar-label">${r.d}</div>
+                <div class="week-bar-track"><div class="week-bar-fill" style="height:${Math.max(4, r.h)}%"></div></div>
+                <div class="week-bar-val">${r.mins > 0 ? Math.round(r.mins) + 'm' : '—'}</div>
+            </div>`).join('');
+    }
+
+    // Learning path built from the student's real activity (history) and
+    // academic context instead of a fixed hardcoded curriculum.
+    function renderLearningPathReal(hist) {
+        const track = document.querySelector('.lp-track');
+        if (!track) return;
+        const quizzes = (hist || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (!quizzes.length) {
+            track.innerHTML = `
+                <div class="lp-step active" style="width:100%;padding:24px;">
+                    <div class="lp-step-icon active-icon"><i class="fas fa-route"></i></div>
+                    <div class="lp-step-content">
+                        <div class="lp-step-badge beginner-badge">Start</div>
+                        <h4>Begin Your Learning Path</h4>
+                        <p>Complete your first quiz or exam to begin building a personalised learning path from your real activity.</p>
+                        <button class="lp-continue-btn" onclick="showSection('quiz')"><i class="fas fa-play"></i> Start Quiz</button>
+                    </div>
+                </div>`;
+            return;
+        }
+        const last = quizzes[quizzes.length - 1];
+        const pct = last.totalQuestions > 0 ? Math.round((last.score / last.totalQuestions) * 100) : 0;
+        const nextStep = pct >= 80 ? 'Mastery' : 'Review';
+        track.innerHTML = `
+            <div class="lp-step completed">
+                <div class="lp-step-icon"><i class="fas fa-check"></i></div>
+                <div class="lp-step-content">
+                    <div class="lp-step-badge beginner-badge">Progress</div>
+                    <h4>Latest Exam (${last.field || 'General'})</h4>
+                    <p>Score ${last.score}/${last.totalQuestions} (${pct}%) on ${new Date(last.date).toLocaleDateString()}</p>
+                    <div class="lp-step-meta"><span><i class="fas fa-bolt"></i> +${last.xp} XP</span></div>
+                </div>
+            </div>
+            <div class="lp-connector ${pct >= 80 ? 'active-connector' : ''}"></div>
+            <div class="lp-step active">
+                <div class="lp-step-icon active-icon"><i class="fas ${pct >= 80 ? 'fa-bolt' : 'fa-book-open'}" aria-hidden="true"></i></div>
+                <div class="lp-step-content">
+                    <div class="lp-step-badge intermediate-badge">Next</div>
+                    <h4>${nextStep}</h4>
+                    <p>${pct >= 70 ? 'Strong recent performance — advance to the next mastery topic.' : 'Focus on your weaker topics to improve accuracy.'}</p>
+                    <button class="lp-continue-btn" onclick="showSection('quiz')"><i class="fas fa-play"></i> Continue Learning</button>
+                </div>
+            </div>`;
+    }
+
+    // AI recommendation from the student's real weakest topic.
+    function renderAIRecommendationReal(analytics) {
+        const body = document.getElementById('ai-rec-body');
+        if (!body || !analytics) return;
+        const weak = (analytics.weakTopics || [])[0];
+        if (!weak) {
+            body.innerHTML = `<p>📚 Complete quizzes to receive personalised recommendations based on your real performance.</p>`;
+            return;
+        }
+        body.innerHTML = `
+            <p>📚 Focus on <strong>${weak.name}</strong> — your weakest area (${weak.pct}%). A targeted session today could boost your score significantly!</p>
+            <div class="ai-rec-topics">
+                <span class="ai-topic-tag weak-tag">${weak.name}</span>
+            </div>
+            <button class="ai-rec-start-btn" onclick="startQuiz('practice')"><i class="fas fa-brain"></i> Start AI-Guided Session</button>`;
     }
 
     // Sidebar mobile

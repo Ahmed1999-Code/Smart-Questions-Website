@@ -283,8 +283,11 @@
     document.getElementById('cq-field-badge').textContent = field;
     document.getElementById('cq-field-tag').textContent = field;
 
-    // ---- Load exam settings ----
-    const examSettings = JSON.parse(sessionStorage.getItem('examSettings') || '{}');
+    // ---- Load exam settings (persistent, specialization-aware, with any
+    // live session override merged in by the engine) ----
+    const examSettings = (window.EduAI && window.EduAI.ExamConfig)
+        ? window.EduAI.ExamConfig.getEffective()
+        : (JSON.parse(sessionStorage.getItem('examSettings') || '{}'));
     const TIMER_SEC = examSettings.timePerQuestion || 60;
     const PASS_SCORE = examSettings.passScore || 50;
 
@@ -451,11 +454,22 @@
         document.getElementById('rs-xp').textContent = '+' + xp;
         document.getElementById('rs-time').textContent = totalTime < 60 ? totalTime + 's' : Math.round(totalTime/60) + 'm';
 
-        // Save results
+        // Save results — persist experience + history once via the authoritative
+        // engine (updates both eduai_users and eduai_current_user and records
+        // this attempt in the account's history).
         try {
-            const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
-            user.xp = (user.xp || 0) + xp;
-            localStorage.setItem('eduai_current_user', JSON.stringify(user));
+            if (window.EduAI && window.EduAI.Experience) {
+                window.EduAI.Experience.recordResult({
+                    rid: 'cq' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                    type: 'exam',
+                    field: field,
+                    score: score,
+                    totalQuestions: customQs.length,
+                    maxStreak: streak,
+                    timeTaken: totalTime,
+                    hintsUsed: 0
+                });
+            }
             sessionStorage.setItem('latestQuizResults', JSON.stringify({ score, totalQuestions: customQs.length, timeTaken: totalTime, field }));
         } catch(e) {}
     }

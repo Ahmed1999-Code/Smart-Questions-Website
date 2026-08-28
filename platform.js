@@ -1089,7 +1089,7 @@ window.EduAI = Object.assign(window.EduAI || {}, {
     function computeAnalytics(record) {
         var hist = _readHist(record);
         var q = hist.length;
-        var correct = 0, answered = 0, time = 0, streaks = [], byDate = {};
+        var correct = 0, answered = 0, time = 0, streaks = [], byDate = {}, byField = {};
         hist.forEach(function (h) {
             correct += h.score || 0;
             answered += h.totalQuestions || (h.score || 0);
@@ -1097,8 +1097,19 @@ window.EduAI = Object.assign(window.EduAI || {}, {
             if (typeof h.maxStreak === 'number') streaks.push(h.maxStreak);
             var d = (h.date || '').slice(0, 10);
             if (d) byDate[d] = (byDate[d] || 0) + (h.timeTaken || 0);
+            var f = (h.field || h.faculty || 'General');
+            if (!byField[f]) byField[f] = { total: 0, correct: 0 };
+            byField[f].total += h.totalQuestions || (h.score || 0);
+            byField[f].correct += h.score || 0;
         });
         var rate = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+        // Real per-topic (specialization/field) accuracy, split into weak/strong.
+        var topics = Object.keys(byField).map(function (name) {
+            var t = byField[name];
+            return { name: name, pct: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0 };
+        }).sort(function (a, b) { return a.pct - b.pct; });
+        var weakTopics = topics.filter(function (t) { return t.pct < 75; });
+        var strongTopics = topics.filter(function (t) { return t.pct >= 75; });
         var agg = {
             quizzes: q,
             correctCount: correct,
@@ -1108,8 +1119,8 @@ window.EduAI = Object.assign(window.EduAI || {}, {
             totalStudyTime: time,
             avgTime: q > 0 ? Math.round(time / q) : 0,
             bestStreak: streaks.length ? Math.max.apply(null, streaks) : 0,
-            weakTopics: [],
-            strongTopics: [],
+            weakTopics: weakTopics,
+            strongTopics: strongTopics,
             byDate: byDate
         };
         return agg;
@@ -1307,6 +1318,138 @@ window.EduAI = Object.assign(window.EduAI || {}, {
         }
     };
 
+})();
+
+
+/* ============================================================
+   EXAM FORMAT CONFIGURATION
+   Persistent, specialization-aware exam-format system.
+
+   Format configs are stored per scope (global, faculty, or
+   specialization / academic level) in localStorage, so they
+   survive sessions and adapt to each student's academic context.
+
+   AUTHORIZATION:
+   - Administrators may configure any scope, including the
+     platform-wide default.
+   - Instructors (teachers/managers) may configure ONLY within the
+     scope assigned to them (their faculty and/or specialization).
+   - Students have NO configuration authority (save returns denied).
+   Every privileged save is validated here — this is the single
+   authoritative guard, independent of any UI hiding.
+   ============================================================ */
+(function initExamConfig() {
+    var CFG_PREFIX = 'eduai_examcfg_';
+    var DEFAULT_KEY = '__global__';
+
+    function _slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+    function _read(key) { try { return JSON.parse(localStorage.getItem(CFG_PREFIX + _slug(key)) || 'null'); } catch (e) { return null; } }
+    function _write(key, cfg) { try { localStorage.setItem(CFG_PREFIX + _slug(key), JSON.stringify(cfg)); } catch (e) {} }
+    function _defaults() {
+        return {
+            formatMode: 'uniform',
+            questionOrder: 'sequential',
+            timePerQuestion: 60,
+            passScore: 50,
+            mcqCount: 0,
+            tfCount: 0,
+            codingCount: 0,
+            questionFormats: ['mcq']
+        };
+    }
+
+    // Determine the caller's authorisation scope, or null when they may not
+    // configure exam formats at all (students / unauthenticated users).
+    function _authScope() {
+        if (!window.EduAI || !window.EduAI.RBAC) return null;
+        var role = window.EduAI.RBAC.getRole();
+        if (!role) return null;
+        if (role === 'admin') return { role: 'admin', scopes: ['__all__'] };
+        if (role === 'teacher' || role === 'manager') {
+            var user = (window.EduAI && window.EduAI.Profile) ? window.EduAI.Profile.get() : null;
+            var scopes = [];
+            if (user && user.faculty) scopes.push(String(user.faculty));
+            if (user && user.specialization) scopes.push(String(user.specialization));
+            return { role: role, scopes: scopes };
+        }
+        return null;
+    }
+
+    window.EduAI.ExamConfig = {
+        // Resolve the most specific config that applies to a student's real
+        // academic context (spec + level, then spec, then faculty + level, then
+        // faculty, then the platform-wide default). Never invents values.
+        getFor: function (opts) {
+            opts = opts || {};
+            var faculty = opts.faculty, spec = opts.specialization, level = opts.level;
+            var user = (window.EduAI && window.EduAI.Profile) ? window.EduAI.Profile.get() : null;
+            if (!faculty) faculty = (user && user.faculty) || '';
+            if (!spec) spec = (user && user.specialization) || '';
+            if (!level) level = (user && user.level) || '';
+            var order = [];
+            if (spec && level) order.push(String(spec) + '|' + String(level));
+            if (spec) order.push(String(spec));
+            if (faculty && level) order.push(String(faculty) + '|' + String(level));
+            if (faculty) order.push(String(faculty));
+            order.push(DEFAULT_KEY);
+            for (var i = 0; i < order.length; i++) {
+                var c = _read(order[i]);
+                if (c) return c;
+            }
+            return _defaults();
+        },
+        // Effective config for launching an exam, honouring any stored config
+        // (falling back to a legacy session override if one exists).
+        getEffective: function () {
+            var cfg = this.getFor({});
+            try {
+                var s = JSON.parse(sessionStorage.getItem('examSettings') || 'null');
+                if (s) {
+                    if (s.formatMode) cfg.formatMode = s.formatMode;
+                    if (s.questionOrder) cfg.questionOrder = s.questionOrder;
+                    if (s.timePerQuestion !== undefined) cfg.timePerQuestion = s.timePerQuestion;
+                    if (s.passScore !== undefined) cfg.passScore = s.passScore;
+                    if (s.mcqCount !== undefined) cfg.mcqCount = s.mcqCount;
+                    if (s.tfCount !== undefined) cfg.tfCount = s.tfCount;
+                    if (s.codingCount !== undefined) cfg.codingCount = s.codingCount;
+                }
+            } catch (e) {}
+            return cfg;
+        },
+        // Authorised save of a config. scopeKey is either 'global' (admin only)
+        // or 'faculty:<name>' / 'spec:<name>'. Returns { denied:true } whenever
+        // the caller has no authority, so students can never modify config.
+        save: function (cfg, scopeKey) {
+            var auth = _authScope();
+            if (!auth) return { denied: true };
+            var clean = Object.assign(_defaults(), cfg || {});
+            clean.questionFormats = (Array.isArray(clean.questionFormats) && clean.questionFormats.length)
+                ? clean.questionFormats : ['mcq'];
+            var key;
+            if (scopeKey === 'global') {
+                if (auth.role !== 'admin') return { denied: true };
+                key = DEFAULT_KEY;
+            } else {
+                var raw = String(scopeKey || '').replace(/^(faculty|spec):/, '');
+                if (!raw) return { denied: true };
+                var inScope = auth.scopes.some(function (s) { return _slug(s) === _slug(raw); }) || auth.role === 'admin';
+                if (!inScope) return { denied: true };
+                key = raw;
+            }
+            _write(key, clean);
+            return { saved: true, scope: key, config: clean };
+        },
+        read: function (scopeKey) {
+            return _read(scopeKey === 'global' ? DEFAULT_KEY : String(scopeKey || ''));
+        },
+        canConfigure: function () { return !!_authScope(); },
+        listScopes: function () {
+            var auth = _authScope();
+            return auth ? auth.scopes : [];
+        },
+        defaults: _defaults,
+        prefix: CFG_PREFIX
+    };
 })();
 
 

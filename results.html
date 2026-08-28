@@ -300,12 +300,17 @@ function loadResults() {
     const topicPcts = simulateTopicPerformance(userAnswers, data);
 
     // Persist experience + history ONCE through the authoritative engine.
-    // Adaptive/custom engines already recorded this run (stable rid) — the
-    // engine de-duplicates by rid, so this never double-counts. Classic runs
-    // (no rid) are recorded here for the first (and only) time.
+    // Engine-backed runs (adaptive/custom) carry a stable rid they already
+    // recorded, so the engine de-duplicates by rid and never double-counts.
+    // Classic runs (no rid) are recorded here; their rid is written back into
+    // the session payload so a same-session page reload does not re-record.
     if (window.EduAI && window.EduAI.Experience) {
-        const rid = data.rid || sessionStorage.getItem('resultsRecordId') || ('rs' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
-        sessionStorage.setItem('resultsRecordId', rid);
+        let rid = data.rid;
+        if (!rid) {
+            rid = 'rs' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            data.rid = rid;
+            try { sessionStorage.setItem('quizResults', JSON.stringify(data)); } catch (e) {}
+        }
         window.EduAI.Experience.recordResult({
             rid: rid,
             type: 'quiz',
@@ -317,8 +322,7 @@ function loadResults() {
             hintsUsed: hintsUsed || 0
         });
     }
-    // Re-read the reconciled session (authoritative) user for display.
-    const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
+    // The authoritative engine has already persisted the reconciled session.
 
     // Render
     container.innerHTML = renderResults(data, pct, grade, getEmoji(pct), getMsg(pct), earnedXP, newBadges, circ, pctOffset, topicPcts, userAnswers);
@@ -343,14 +347,22 @@ function loadResults() {
 }
 
 function simulateTopicPerformance(answers) {
+    // Real per-topic accuracy computed from each answer's actual topic/field,
+    // never positional or fabricated. Returns [{ name, pct }] sorted weakest first.
     if (!answers || answers.length === 0) return [];
-    const topics = ['Virtual Environments', 'Package Management', 'pip Commands', 'Conda & Pipenv', 'Advanced Configs'];
-    return topics.map((t, i) => {
-        const slice = answers.slice(Math.floor(i * answers.length / topics.length), Math.floor((i+1) * answers.length / topics.length));
-        if (slice.length === 0) return { name: t, pct: 0 };
-        const correct = slice.filter(a => a.isCorrect).length;
-        return { name: t, pct: Math.round((correct / slice.length) * 100) };
-    }).filter(t => t.pct !== undefined);
+    const byTopic = {};
+    answers.forEach(a => {
+        let t = (a.topic || a.field || 'General').trim();
+        t = t.replace(/-/g, ' ');
+        // Normalise display: title-case simple slugs.
+        t = t.charAt(0).toUpperCase() + t.slice(1);
+        if (!byTopic[t]) byTopic[t] = { total: 0, correct: 0 };
+        byTopic[t].total++;
+        if (a.isCorrect) byTopic[t].correct++;
+    });
+    return Object.keys(byTopic)
+        .map(name => ({ name, pct: byTopic[name].total ? Math.round((byTopic[name].correct / byTopic[name].total) * 100) : 0 }))
+        .sort((a, b) => a.pct - b.pct);
 }
 
 function getBarColor(pct) {

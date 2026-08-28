@@ -220,6 +220,30 @@ document.getElementById('es-field-badge').innerHTML = '<i class="fas fa-tag"></i
 document.getElementById('es-subtitle').textContent = 'Configure how ' + qs.length + ' question' + (qs.length !== 1 ? 's' : '') + ' will be presented to your students.';
 document.getElementById('footer-q-info').textContent = qs.length + ' question' + (qs.length !== 1 ? 's' : '') + ' ready to launch';
 
+// ---- Pre-load any saved (persistent) config for the educator's academic
+// scope, so a returning instructor sees their last published format. Only
+// applied when there is no active question-setup session in progress.
+if (window.EduAI && window.EduAI.ExamConfig) {
+  try {
+    var savedFormats = JSON.parse(sessionStorage.getItem('selectedFormats') || '[]');
+  } catch (e) { var savedFormats = []; }
+  if (!savedFormats.length) {
+    var pc = EduAI.ExamConfig.getFor({});
+    if (pc && pc.formatMode) {
+      selectMode(pc.formatMode === 'mixed-auto' ? 'mixed' : (pc.formatMode || 'uniform'));
+      selectOrder(pc.questionOrder || 'sequential');
+      if (pc.timePerQuestion !== undefined && document.getElementById('time-per-q').value != pc.timePerQuestion) {
+        document.getElementById('time-per-q').value = pc.timePerQuestion;
+      }
+      if (pc.passScore !== undefined) document.getElementById('pass-score').value = pc.passScore;
+      if (pc.mcqCount !== undefined) document.getElementById('mcq-count').value = pc.mcqCount;
+      if (pc.tfCount !== undefined) document.getElementById('tf-count').value = pc.tfCount;
+      if (pc.codingCount !== undefined) document.getElementById('code-count').value = pc.codingCount;
+      if (pc.formatMode === 'custom') validateSplit();
+    }
+  }
+}
+
 // ---- Read formats chosen on question-feed page ----
 var savedFormats = [];
 try { savedFormats = JSON.parse(sessionStorage.getItem('selectedFormats') || '[]'); } catch(e) {}
@@ -325,6 +349,18 @@ function launchExam() {
   };
 
   sessionStorage.setItem('examSettings', JSON.stringify(settings));
+
+  // Persist this format to the educator's authorized academic scope so it
+  // applies to the matching faculty/specialization of their students. The
+  // write is validated by EduAI.ExamConfig (denied for students / out-of-scope).
+  if (window.EduAI && window.EduAI.ExamConfig) {
+    var scopeKey = 'faculty:' + field;
+    var res = EduAI.ExamConfig.save(settings, scopeKey);
+    if (res && res.denied) {
+      console.warn('[ExamConfig] Denied persisting config to scope "' + scopeKey + '" — live session only.');
+    }
+  }
+
   sessionStorage.setItem('customQuestions', JSON.stringify(finalQs));
   window.location.href = 'custom-quiz.html';
 }
