@@ -2320,3 +2320,44 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text);
     .bld-les-actions { flex-wrap: wrap; }
     .perm-checkboxes { flex-direction: column; gap: 6px; }
 }
+
+/* ── Course academic-context label (student cards) ─────────── */
+.course-context-lbl {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+    font-size: 0.74rem; color: var(--text2); margin: 4px 0 10px;
+}
+.course-context-lbl i { color: var(--primary); margin-right: 4px; font-size: 0.78rem; }
+
+/* ── Course video player loading / empty / error states ─────── */
+.course-video-state {
+    position: relative; width: 100%; height: 100%; min-height: 300px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; color: var(--text3); padding: 32px; box-sizing: border-box;
+    background: var(--bg3); border-radius: var(--radius);
+}
+.course-video-state i { font-size: 2.4rem; opacity: 0.35; margin-bottom: 14px; }
+.course-video-state h4 { margin: 0 0 6px; font-size: 1rem; font-weight: 800; color: var(--text); }
+.course-video-state p { margin: 0; font-size: 0.84rem; max-width: 360px; line-height: 1.5; }
+.course-video-error i { color: #ef4444; opacity: 0.7; }
+.course-video-loading {
+    position: absolute; inset: 0; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; background: var(--bg3); color: var(--text3); font-size: 0.86rem;
+}
+.course-video-loading i { color: var(--primary); font-size: 1.4rem; }
+#player-video-wrap { position: relative; }
+#player-video-wrap iframe { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; border: 0; }
+
+/* ── Course responsive refinements (touch-friendly) ─────────── */
+@media (max-width: 720px) {
+    .courses-top-bar { gap: 10px; }
+    .course-thumb { height: 150px; }
+    .course-vid-badge { font-size: 0.68rem; }
+    #player-video-wrap, .course-video-state { min-height: 220px; }
+}
+@media (max-width: 420px) {
+    .courses-grid { gap: 16px; }
+    .course-cta-btn { width: 100%; justify-content: center; }
+    .courses-mgmt-table-wrap { -webkit-overflow-scrolling: touch; }
+}
+

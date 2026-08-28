@@ -1979,6 +1979,12 @@ ADVANCED CAPABILITIES:
         if (!c.shortDescription) c.shortDescription = c.desc || '';
         if (!c.description) c.description = c.desc || '';
         if (!c.thumbnail) c.thumbnail = '';
+        // Academic scoping — a course with no faculty/specialization/level is a
+        // generic course available to everyone (existing behaviour preserved).
+        if (c.faculty === undefined) c.faculty = c.college || '';
+        if (c.specialization === undefined) c.specialization = c.specialty || '';
+        if (c.academicLevel === undefined) c.academicLevel = c.level || '';
+        if (c.order === undefined) c.order = 0;
         return c;
     }
 
@@ -2031,6 +2037,65 @@ ADVANCED CAPABILITIES:
     }
     function _saveCourses() { try{localStorage.setItem(COURSES_DB_KEY,JSON.stringify(_coursesCache));}catch(e){} }
 
+    // Read the current viewer's (student's) real academic context. Uses the
+    // authoritative profile store with a legacy-key back-fill; never invents
+    // values. Returns an object that may hold empty strings when unknown.
+    function _getStudentAcademicContext() {
+        if (window.EduAI && window.EduAI.Profile && window.EduAI.Profile.loadAcademicContext) {
+            try {
+                const ctx = window.EduAI.Profile.loadAcademicContext() || {};
+                return {
+                    faculty: String(ctx.faculty || '').toLowerCase(),
+                    collegeId: String(ctx.collegeId || '').toLowerCase(),
+                    specialization: String(ctx.specialization || '').toLowerCase(),
+                    department: String(ctx.department || '').toLowerCase(),
+                    level: String(ctx.level || '').toLowerCase(),
+                    user: (window.EduAI.RBAC && window.EduAI.RBAC.getUser()) || null
+                };
+            } catch (e) {}
+        }
+        const u = (window.EduAI.RBAC && window.EduAI.RBAC.getUser()) || {};
+        return {
+            faculty: '',
+            collegeId: '',
+            specialization: '',
+            department: '',
+            level: String(u.level || '').toLowerCase(),
+            user: u
+        };
+    }
+
+    function _normList(v) {
+        return (Array.isArray(v) ? v : String(v || '').split(',')).map(s => String(s).trim().toLowerCase()).filter(Boolean);
+    }
+
+    // Decide whether a course is eligible for the given student context.
+    // A course with no academic scope (faculty/specialization/level set) is a
+    // generic course and remains visible to every student (legacy behaviour).
+    // A course with academic scope is only visible when the student matches on
+    // faculty, then specialization, then level — approximating
+    // Faculty -> Specialization -> Academic Level -> Eligible.
+    function _isCourseVisibleTo(c, ctx) {
+        const cFac = _normList(c.faculty);
+        const cSpec = _normList(c.specialization);
+        const cLevel = _normList(c.academicLevel || (Array.isArray(c.level) ? c.level : String(c.level||'')));
+
+        const hasScope = cFac.length || cSpec.length || cLevel.length;
+        if (!hasScope) return true; // generic course — everyone eligible
+
+        const sFac = String(ctx.faculty || ctx.collegeId || '');
+        const sSpec = String(ctx.specialization || ctx.department || '');
+
+        // Faculty mismatch blocks immediately (never leak unrelated content).
+        if (cFac.length && !cFac.includes(sFac) && !cFac.includes('all')) return false;
+        // Specialization narrows within the faculty.
+        if (cSpec.length && !cSpec.includes(sSpec) && !cSpec.includes('all')) return false;
+        // Academic level narrows if declared.
+        if (cLevel.length && ctx.level && !cLevel.includes('all') && !cLevel.includes(ctx.level)) return false;
+        return true;
+    }
+
+
     // ── Course Store ──────────────────────────────────────────
     const _courseStore = {
         getAll(includeDeleted){ return includeDeleted ? _coursesCache : _coursesCache.filter(c=>!c.deletedAt); },
@@ -2038,10 +2103,11 @@ ADVANCED CAPABILITIES:
         getBySlug(slug){ return _coursesCache.find(c=>c.slug===slug&&!c.deletedAt); },
         getPublished(){ return _coursesCache.filter(c=>c.status==='published'&&c.visibility!=='private'&&!c.deletedAt); },
         getStudentVisible(){
+            const ctx = _getStudentAcademicContext();
             return _coursesCache.filter(c=>{
                 if(c.deletedAt||c.status!=='published') return false;
                 if(c.visibility==='private') return false;
-                return true;
+                return _isCourseVisibleTo(c, ctx);
             });
         },
         create(data){
@@ -2051,6 +2117,8 @@ ADVANCED CAPABILITIES:
                 thumbnail:data.thumbnail||'', instructor:data.instructor||(user?user.name:'Unknown'),
                 category:data.category||'Other', level:data.level||'Beginner',
                 language:data.language||'English', color:data.color||'#6c63ff',
+                faculty:data.faculty||'', specialization:data.specialization||'',
+                academicLevel:data.academicLevel||data.level||'Beginner', order:data.order||0,
                 status:COURSE_STATUSES.DRAFT, visibility:COURSE_VISIBILITY.PRIVATE,
                 downloadEnabled:false, createdBy:user?user.email:'unknown',
                 updatedBy:user?user.email:'unknown', createdAt:new Date().toISOString(),
@@ -2112,16 +2180,57 @@ ADVANCED CAPABILITIES:
         setManagerCourseAccess(email,ids){ const p=this._getPerms(); p[email]=p[email]||{permissions:[],courseAccess:[]}; p[email].courseAccess=ids; this._savePerms(p); },
         _has(email,perm){ return this.getManagerPermissions(email).includes(perm); },
         _hasAccess(email,cid){ const a=this.getManagerCourseAccess(email); return a.length===0||a.includes(cid); },
-        isManagement(){ return EduAI.RBAC.isAdmin()||EduAI.RBAC.isManager(); },
-        canView(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.read')&&this._hasAccess(u.email,cid); const c=_courseStore.getById(cid); return c&&!c.deletedAt&&c.status==='published'&&c.visibility!=='private'; },
-        canCreate(){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.create'); return false; },
-        canUpdate(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.update')&&this._hasAccess(u.email,cid); return false; },
-        canDelete(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.delete')&&this._hasAccess(u.email,cid); return false; },
-        canPublish(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.publish')&&this._hasAccess(u.email,cid); return false; },
-        canManageLessons(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.manage_lessons')&&this._hasAccess(u.email,cid); return false; },
-        canManageModules(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.manage_modules')&&this._hasAccess(u.email,cid); return false; },
-        canManageDownloads(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.manage_downloads')&&this._hasAccess(u.email,cid); return false; },
-        canViewAnalytics(cid){ const u=EduAI.RBAC.getUser(); if(!u)return false; if(EduAI.RBAC.isAdmin())return true; if(EduAI.RBAC.isManager())return this._has(u.email,'courses.view_analytics')&&this._hasAccess(u.email,cid); return false; },
+        // Teacher academic scope (lower-cased faculty / specialization) used to
+        // authorise instructors to manage content within their own context.
+        _teacherScope(){
+            if(!EduAI.RBAC.isTeacher())return null;
+            try{
+                const ctx=(EduAI.Profile&&EduAI.Profile.loadAcademicContext)?EduAI.Profile.loadAcademicContext():{};
+                return { faculty:String(ctx.faculty||'').toLowerCase(), specialization:String(ctx.specialization||'').toLowerCase() };
+            }catch(e){ return { faculty:'', specialization:'' }; }
+        },
+        // Authorise a management action on a specific course.
+        // Admin: platform-wide. Manager: explicit permission + course access.
+        // Teacher (instructor): within their academic scope or their own course.
+        _canManage(cid,perm){
+            const u=EduAI.RBAC.getUser(); if(!u)return false;
+            if(EduAI.RBAC.isAdmin())return true;
+            if(EduAI.RBAC.isManager())return this._has(u.email,perm)&&this._hasAccess(u.email,cid);
+            if(EduAI.RBAC.isTeacher()){
+                const c=_courseStore.getById(cid); if(!c)return false;
+                if(c.createdBy===u.email)return true; // owns it
+                const t=this._teacherScope(); if(!t)return false;
+                const cFac=_normList(c.faculty); const cSpec=_normList(c.specialization);
+                const inScope=(!cFac.length&&!cSpec.length)||cFac.includes(t.faculty)||cSpec.includes(t.specialization);
+                return inScope;
+            }
+            return false;
+        },
+        _canCreate(){
+            const u=EduAI.RBAC.getUser(); if(!u)return false;
+            if(EduAI.RBAC.isAdmin())return true;
+            if(EduAI.RBAC.isManager())return this._has(u.email,'courses.create');
+            if(EduAI.RBAC.isTeacher())return true; // created within their own scope
+            return false;
+        },
+        isManagement(){ return EduAI.RBAC.isAdmin()||EduAI.RBAC.isManager()||EduAI.RBAC.isTeacher(); },
+        canView(cid){
+            const u=EduAI.RBAC.getUser(); if(!u)return false;
+            if(EduAI.RBAC.isAdmin())return true;
+            if(EduAI.RBAC.isManager()||EduAI.RBAC.isTeacher()){
+                if(this._canManage(cid,'courses.read'))return true;
+            }
+            const c=_courseStore.getById(cid);
+            return c&&!c.deletedAt&&c.status==='published'&&c.visibility!=='private'&&_isCourseVisibleTo(c,_getStudentAcademicContext());
+        },
+        canCreate(){ return this._canCreate(); },
+        canUpdate(cid){ return this._canManage(cid,'courses.update'); },
+        canDelete(cid){ return this._canManage(cid,'courses.delete'); },
+        canPublish(cid){ return this._canManage(cid,'courses.publish'); },
+        canManageLessons(cid){ return this._canManage(cid,'courses.manage_lessons'); },
+        canManageModules(cid){ return this._canManage(cid,'courses.manage_modules'); },
+        canManageDownloads(cid){ return this._canManage(cid,'courses.manage_downloads'); },
+        canViewAnalytics(cid){ return this._canManage(cid,'courses.view_analytics'); },
         canDownload(cid){ const c=_courseStore.getById(cid); return c&&c.downloadEnabled; },
         getAllManagers(){ return (JSON.parse(localStorage.getItem('eduai_users')||'[]')).filter(u=>u.role==='manager'); }
     };
@@ -2342,7 +2451,12 @@ ADVANCED CAPABILITIES:
             const addBtn=document.getElementById('course-add-btn');
             if(addBtn) addBtn.style.display=_courseAuth.canCreate()?'flex':'none';
             const grid=document.getElementById('courses-grid');
-            if(grid){ this.renderCatalog(); }
+            if(grid){
+                // Show a loading placeholder immediately, then render on the next
+                // frame so users never see a blank screen.
+                grid.innerHTML='<div class="courses-empty"><div class="courses-empty-icon"><i class="fas fa-spinner fa-spin"></i></div><h3>Loading courses…</h3><p>Please wait a moment.</p></div>';
+                requestAnimationFrame(()=>this.renderCatalog());
+            }
             const search=document.getElementById('course-search-input');
             if(search) search.addEventListener('input',(e)=>{_courseSearchQ=e.target.value.toLowerCase().trim();_coursePage=1;this.renderCatalog();});
             const sortSel=document.getElementById('course-sort-select');
@@ -2376,6 +2490,11 @@ ADVANCED CAPABILITIES:
 
         // ── Student Catalog ──────────────────────────────────
         renderCatalog(){
+            const grid=document.getElementById('courses-grid'); if(!grid)return;
+            if(!(EduAI.RBAC&&EduAI.RBAC.getUser())){
+                grid.innerHTML='<div class="courses-empty"><div class="courses-empty-icon"><i class="fas fa-user-lock"></i></div><h3>Sign in required</h3><p>Please sign in to view your courses.</p><a href="auth.html" class="course-cta-btn" style="text-decoration:none;display:inline-flex"><i class="fas fa-sign-in-alt"></i> Sign In</a></div>';
+                return;
+            }
             const isMgmt=_courseAuth.isManagement();
             if(isMgmt){this.renderManagementTable();return;}
             this.renderStudentCatalog();
@@ -2394,7 +2513,9 @@ ADVANCED CAPABILITIES:
                 return new Date(b.updatedAt)-new Date(a.updatedAt);
             });
             if(!courses.length){
-                grid.innerHTML='<div class="courses-empty"><div class="courses-empty-icon"><i class="fas fa-book-open"></i></div><h3>No Courses Available</h3><p>Check back later for new courses.</p></div>';
+                const ctx=_getStudentAcademicContext();
+                const scopeNote=(ctx.faculty||ctx.specialization)?` No published courses match your faculty${ctx.specialization?'/specialization':''} yet.`:' No published courses are available yet.';
+                grid.innerHTML='<div class="courses-empty"><div class="courses-empty-icon"><i class="fas fa-book-open"></i></div><h3>No Courses Available</h3><p>'+scopeNote+' Check back later or ask your instructor to publish a course.</p></div>';
                 this._updateCatalogFilters(courses); return;
             }
             this._updateCatalogFilters(courses);
@@ -2415,6 +2536,7 @@ ADVANCED CAPABILITIES:
                         </div>
                         <div class="course-title-c">${_escHtml(c.title)}</div>
                         <div class="course-desc-c">${_escHtml(c.shortDescription||c.description||'')}</div>
+                        <div class="course-context-lbl">${[c.faculty?('<i class="fas fa-landmark"></i> '+_escHtml(c.faculty)):'', c.specialization?('<i class="fas fa-bullseye"></i> '+_escHtml(c.specialization)):'', c.level?('<i class="fas fa-signal"></i> '+_escHtml(c.level)):''].filter(Boolean).join(' &nbsp;·&nbsp; ')||''}</div>
                         <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;color:var(--text3)">
                             <i class="fas fa-user"></i> ${_escHtml(c.instructor||'Unknown')}
                             <span style="margin-left:auto"><i class="fas fa-clock"></i> ${_calcDuration(c.modules)}</span>
@@ -2453,6 +2575,19 @@ ADVANCED CAPABILITIES:
             this._showView('catalog');
             const grid=document.getElementById('courses-grid'); if(!grid)return;
             let courses=_courseStore.getAll(true);
+            // Teachers (instructors) only manage courses within their academic
+            // scope (their faculty/specialization or courses they own); admins
+            // and managers keep the existing full access.
+            if(EduAI.RBAC.isTeacher()){
+                const me=(EduAI.RBAC.getUser()||{}).email;
+                const t=_courseAuth._teacherScope()||{faculty:'',specialization:''};
+                courses=courses.filter(c=>
+                    c.createdBy===me ||
+                    (!_normList(c.faculty).length&&!_normList(c.specialization).length) ||
+                    _normList(c.faculty).includes(t.faculty) ||
+                    _normList(c.specialization).includes(t.specialization)
+                );
+            }
             if(_courseSearchQ)courses=courses.filter(c=>c.title.toLowerCase().includes(_courseSearchQ)||(c.instructor||'').toLowerCase().includes(_courseSearchQ));
             if(_courseFilterStatus!=='all'){
                 if(_courseFilterStatus==='deleted')courses=courses.filter(c=>c.deletedAt);
@@ -2625,12 +2760,17 @@ ADVANCED CAPABILITIES:
             _progressStore.setCurrentLesson(_activeCourseId,lid);
             const l=ctx.lesson;
 
-            const embedUrl=_videoValidator.getEmbedUrl(l.videoSource);
+            const vsrc=l.videoSource||{type:'external',url:''};
+            const isUrlPresent=!!(vsrc.url&&String(vsrc.url).trim());
+            const vresult=_videoValidator.validate(isUrlPresent?vsrc:{url:'',type:vsrc.type});
+            const embedUrl=isUrlPresent?_videoValidator.getEmbedUrl(vsrc):'';
             const player=document.getElementById('player-video-wrap');
-            if(embedUrl){
-                player.innerHTML=`<iframe src="${_escHtml(embedUrl)}" allowfullscreen allow="autoplay;encrypted-media" frameborder="0"></iframe>`;
+            if(!isUrlPresent){
+                player.innerHTML=`<div class="course-video-state"><i class="fas fa-video"></i><h4>No video attached yet</h4><p>This lesson has no video. Use the lesson editor to add a YouTube or direct video URL.</p></div>`;
+            }else if(!vresult.valid){
+                player.innerHTML=`<div class="course-video-state course-video-error"><i class="fas fa-exclamation-triangle"></i><h4>Invalid video URL</h4><p>This lesson's video link could not be read. Ask the instructor to fix it.</p></div>`;
             }else{
-                player.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:300px;color:var(--text3);"><i class="fas fa-video" style="font-size:2.5rem;opacity:0.3;margin-bottom:12px;"></i><p>No video attached yet.</p></div>`;
+                player.innerHTML=`<div class="course-video-loading"><i class="fas fa-spinner fa-spin"></i><span>Loading video…</span></div><iframe src="${_escHtml(embedUrl)}" allowfullscreen allow="autoplay;encrypted-media" frameborder="0" onload="this.previousElementSibling.style.display='none'"></iframe>`;
             }
 
             document.getElementById('player-lesson-title').textContent='Lesson '+(ctx.index+1)+' — '+l.title;
@@ -2877,6 +3017,8 @@ ADVANCED CAPABILITIES:
             let catOpts=COURSE_CATEGORIES.map(cat=>`<option value="${cat}" ${c.category===cat?'selected':''}>${cat}</option>`).join('');
             let lvlOpts=COURSE_LEVELS.map(l=>`<option value="${l}" ${c.level===l?'selected':''}>${l}</option>`).join('');
             let langOpts=COURSE_LANGUAGES.map(l=>`<option value="${l}" ${c.language===l?'selected':''}>${l}</option>`).join('');
+            const FACULTY_OPTS=['','Computer Science','Engineering','Medicine','Business','Law','Science','Education','Arts','Information Technology','Economics','Architecture','Agriculture','Pharmacy','Dentistry','Nursing','Other']
+                .map(f=>f?`<option value="${f}" ${String(c.faculty||'')===f?'selected':''}>${f}</option>`:'<option value="">Any Faculty</option>').join('');
             modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
                 <div class="bld-modal-header"><h3>Edit Course Info</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
                 <div class="bld-modal-body">
@@ -2887,6 +3029,10 @@ ADVANCED CAPABILITIES:
                     <div class="bld-field-row">
                         <div class="bld-field"><label>Category</label><select class="bld-sel" id="eci-cat">${catOpts}</select></div>
                         <div class="bld-field"><label>Level</label><select class="bld-sel" id="eci-level">${lvlOpts}</select></div>
+                    </div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Faculty (audience)</label><select class="bld-sel" id="eci-faculty">${FACULTY_OPTS}</select></div>
+                        <div class="bld-field"><label>Specialization (audience)</label><input class="bld-inp" id="eci-spec" value="${_escHtml(c.specialization||'')}" placeholder="e.g. Cardiology (blank = all)"></div>
                     </div>
                     <div class="bld-field-row">
                         <div class="bld-field"><label>Language</label><select class="bld-sel" id="eci-lang">${langOpts}</select></div>
@@ -2915,6 +3061,9 @@ ADVANCED CAPABILITIES:
                 instructor:document.getElementById('eci-instructor').value.trim(),
                 category:document.getElementById('eci-cat').value,
                 level:document.getElementById('eci-level').value,
+                academicLevel:document.getElementById('eci-level').value,
+                faculty:document.getElementById('eci-faculty').value.trim(),
+                specialization:document.getElementById('eci-spec').value.trim(),
                 language:document.getElementById('eci-lang').value,
                 thumbnail:document.getElementById('eci-thumb').value.trim(),
                 color, downloadEnabled:document.getElementById('eci-dl').checked
@@ -3072,6 +3221,8 @@ ADVANCED CAPABILITIES:
             let catOpts=COURSE_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('');
             let lvlOpts=COURSE_LEVELS.map(l=>`<option value="${l}">${l}</option>`).join('');
             let langOpts=COURSE_LANGUAGES.map(l=>`<option value="${l}">${l}</option>`).join('');
+            const FACULTY_OPTS=['','Computer Science','Engineering','Medicine','Business','Law','Science','Education','Arts','Information Technology','Economics','Architecture','Agriculture','Pharmacy','Dentistry','Nursing','Other']
+                .map(v=>v?`<option value="${v}">${v}</option>`:'<option value="">Any Faculty</option>').join('');
             modal.innerHTML=`<div class="bld-modal" onclick="event.stopPropagation()">
                 <div class="bld-modal-header"><h3>Create New Course</h3><button class="bld-close-btn" onclick="EduAI.Courses._closeModal()"><i class="fas fa-times"></i></button></div>
                 <div class="bld-modal-body">
@@ -3082,6 +3233,10 @@ ADVANCED CAPABILITIES:
                     <div class="bld-field-row">
                         <div class="bld-field"><label>Category</label><select class="bld-sel" id="eci-cat">${catOpts}</select></div>
                         <div class="bld-field"><label>Level</label><select class="bld-sel" id="eci-level">${lvlOpts}</select></div>
+                    </div>
+                    <div class="bld-field-row">
+                        <div class="bld-field"><label>Faculty (audience)</label><select class="bld-sel" id="eci-faculty">${FACULTY_OPTS}</select></div>
+                        <div class="bld-field"><label>Specialization (audience)</label><input class="bld-inp" id="eci-spec" placeholder="e.g. Cardiology (blank = all)"></div>
                     </div>
                     <div class="bld-field-row">
                         <div class="bld-field"><label>Language</label><select class="bld-sel" id="eci-lang">${langOpts}</select></div>
@@ -3106,10 +3261,16 @@ ADVANCED CAPABILITIES:
                 instructor:document.getElementById('eci-instructor').value.trim(),
                 category:document.getElementById('eci-cat').value,
                 level:document.getElementById('eci-level').value,
-                language:document.getElementById('eci-lang').value, color
+                language:document.getElementById('eci-lang').value, color,
+                faculty:document.getElementById('eci-faculty').value.trim(),
+                specialization:document.getElementById('eci-spec').value.trim(),
+                academicLevel:document.getElementById('eci-level').value
             });
             this._closeModal();
-            if(c){this.renderCatalog();showToast('✅ Course created. Open the builder to add modules and lessons.','success',4000);}
+            if(c){
+                this.renderCatalog();
+                showToast('✅ Course created. Add modules/lessons, then Publish for students.','success',4000);
+            }
         }
     };
 
