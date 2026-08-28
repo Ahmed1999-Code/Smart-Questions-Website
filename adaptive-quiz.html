@@ -1017,16 +1017,9 @@
         clearInterval(state.timerInterval);
         const timeTaken = Math.round((Date.now() - state.sessionStart) / 1000);
         const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
-        user.xp = (user.xp || 0) + state.xp;
-        user.streak = Math.max(user.streak || 0, state.streak);
-        if (!user.badges) user.badges = [];
-        if (state.score === state.questions.length && !user.badges.includes('perfect')) user.badges.push('perfect');
-        if (state.maxStreak >= 5 && !user.badges.includes('streak_5')) user.badges.push('streak_5');
-        localStorage.setItem('eduai_current_user', JSON.stringify(user));
-
         const results = {
             studentName: user.name || 'Student',
-            studentCode: user.email || 'â€”',
+            studentCode: user.email || '—',
             score: state.score,
             totalQuestions: state.questions.length,
             userAnswers: state.userAnswers,
@@ -1035,8 +1028,25 @@
             timeTaken,
             hintsUsed: state.hintsUsed,
             skipsUsed: state.skipsUsed,
-            adaptiveMode: true
+            adaptiveMode: true,
+            rid: 'ad' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)
         };
+        // Persist experience + history ONCE through the authoritative engine
+        // (updates eduai_users AND eduai_current_user, records history). This
+        // replaces the previous local-only user.xp mutation, which was neither
+        // written to the authoritative store nor safe against re-rendering.
+        if (window.EduAI && window.EduAI.Experience) {
+            window.EduAI.Experience.recordResult({
+                rid: results.rid,
+                type: 'quiz',
+                field: sessionStorage.getItem('questionField') || '',
+                score: state.score,
+                totalQuestions: state.questions.length,
+                maxStreak: state.maxStreak,
+                timeTaken: timeTaken,
+                hintsUsed: state.hintsUsed
+            });
+        }
         sessionStorage.setItem('quizResults', JSON.stringify(results));
         localStorage.setItem('latestQuizResults', JSON.stringify(results));
         setTimeout(() => { window.location.href = 'results.html'; }, 300);

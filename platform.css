@@ -1431,6 +1431,27 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text);
     #eduai-tutor-fab { right: 16px; bottom: 20px; }
 }
 
+/* ============================================================
+   GLOBAL "RETURN TO PREVIOUS PAGE" FLOATING BUTTON
+   ============================================================ */
+#eduai-back-btn {
+    position: fixed; bottom: 28px; left: 28px; z-index: 9999;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #6c63ff, #a855f7);
+    border: none; cursor: pointer; color: #fff;
+    font-size: 1.15rem; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 28px rgba(108,99,255,0.55);
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    outline: none;
+}
+#eduai-back-btn:hover {
+    transform: translateY(-4px) scale(1.08);
+    box-shadow: 0 14px 36px rgba(108,99,255,0.65);
+}
+@media (max-width: 480px) {
+    #eduai-back-btn { left: 16px; bottom: 20px; }
+}
+
 
 /* ============================================================
    VIDEO COURSES SECTION

@@ -295,16 +295,30 @@ function loadResults() {
     if ((maxStreak || 0) >= 5) newBadges.push({ id:'streak_5', icon:'fa-fire', color:'#f7931e' });
     if (!user.badges || !user.badges.includes('first_quiz')) newBadges.push({ id:'first_quiz', icon:'fa-star', color:'#ffd700' });
 
-    // Topic performance (simulated based on Q buckets)
-    const topicPcts = simulateTopicPerformance(userAnswers);
+    // Topic performance (derived from the REAL per-question topic field, not
+    // fabrication — waits until after the XP/history persistence below).
+    const topicPcts = simulateTopicPerformance(userAnswers, data);
 
-    // Update user XP in localStorage
-    if (user) {
-        user.xp = (user.xp || 0) + earnedXP;
-        if (!user.badges) user.badges = [];
-        newBadges.forEach(b => { if (!user.badges.includes(b.id)) user.badges.push(b.id); });
-        localStorage.setItem('eduai_current_user', JSON.stringify(user));
+    // Persist experience + history ONCE through the authoritative engine.
+    // Adaptive/custom engines already recorded this run (stable rid) — the
+    // engine de-duplicates by rid, so this never double-counts. Classic runs
+    // (no rid) are recorded here for the first (and only) time.
+    if (window.EduAI && window.EduAI.Experience) {
+        const rid = data.rid || sessionStorage.getItem('resultsRecordId') || ('rs' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+        sessionStorage.setItem('resultsRecordId', rid);
+        window.EduAI.Experience.recordResult({
+            rid: rid,
+            type: 'quiz',
+            field: data.field || '',
+            score: score,
+            totalQuestions: totalQuestions,
+            maxStreak: maxStreak || 0,
+            timeTaken: timeTaken || 0,
+            hintsUsed: hintsUsed || 0
+        });
     }
+    // Re-read the reconciled session (authoritative) user for display.
+    const user = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
 
     // Render
     container.innerHTML = renderResults(data, pct, grade, getEmoji(pct), getMsg(pct), earnedXP, newBadges, circ, pctOffset, topicPcts, userAnswers);

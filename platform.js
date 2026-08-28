@@ -303,8 +303,292 @@ function getNextBadges(user, quizResult) {
 }
 
 
+// ---- EARLY OBJECT INIT (so IIFEs below can attach methods) ----
+window.EduAI = window.EduAI || {};
+
+// ---- GLOBAL "RETURN TO PREVIOUS PAGE" ----
+// The site is a multi-page app using full page navigations, so the previous
+// page is tracked across page loads using a session history plus
+// document.referrer (the internal page we arrived from).
+(function initGlobalBack() {
+    const BACK_KEY = 'eduai_nav_history';
+
+    function _readHistory() {
+        try { return JSON.parse(sessionStorage.getItem(BACK_KEY) || '[]'); }
+        catch(e) { return []; }
+    }
+    function _writeHistory(h) { try { sessionStorage.setItem(BACK_KEY, JSON.stringify(h)); } catch(e){} }
+
+    // Record current page into the stack (dedup consecutive duplicates).
+    function _recordCurrent() {
+        const current = location.href.split('#')[0];
+        const h = _readHistory();
+        if (h[h.length - 1] !== current) h.push(current);
+        if (h.length > 30) h.splice(0, h.length - 30);
+        _writeHistory(h);
+    }
+
+    // A previous page is considered reachable when we arrived from an internal
+    // page (full-page navigation) or have a stored earlier entry.
+    function _hasPrevious() {
+        if (document.referrer && document.referrer.indexOf(location.origin) === 0 &&
+            document.referrer.split('#')[0] !== location.href.split('#')[0]) return true;
+        const h = _readHistory();
+        return h.length > 1 && h[h.length - 2] !== location.href.split('#')[0];
+    }
+
+    function _isAuthenticated() {
+        try { return !!JSON.parse(localStorage.getItem('eduai_current_user') || 'null'); }
+        catch(e) { return false; }
+    }
+
+    window.EduAI.goBack = function() {
+        const current = location.href.split('#')[0];
+
+        // ① Prefer the true browser back action when we navigated internally.
+        if (document.referrer && document.referrer.indexOf(location.origin) === 0 &&
+            document.referrer.split('#')[0] !== current) {
+            history.back();
+            return;
+        }
+
+        // ② Otherwise use the persisted session stack (dynamic routes/query preserved).
+        const h = _readHistory();
+        for (let i = h.length - 2; i >= 0; i--) {
+            if (h[i] && h[i] !== current) { location.href = h[i]; return; }
+        }
+
+        // ③ Safe fallback using the existing navigation structure.
+        location.href = _isAuthenticated() ? 'dashboard.html' : 'index.html';
+    };
+
+    // Inject a global floating "Back" control matching the site's design system.
+    function _inject() {
+        // Only on actual site pages; skip when there is nothing meaningful to return from.
+        if (document.getElementById('eduai-back-btn')) return;
+        // The home/landing page is served at a path that ends in "/" or "index.html".
+        const path = location.pathname.replace(/\\/g, '/').toLowerCase();
+        const isHome = path === '/' || path === '' ||
+            /\/$/.test(path) || /\/index\.html$/.test(path) || /^index\.html$/.test(path);
+        if (isHome) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'eduai-back-btn';
+        btn.title = 'Return to Previous Page';
+        btn.setAttribute('aria-label', 'Return to Previous Page');
+        btn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); window.EduAI.goBack(); };
+        document.body.appendChild(btn);
+
+        // Keep the button current on internal arrivals; hide when no previous page.
+        const update = () => { btn.style.display = _hasPrevious() ? '' : 'none'; };
+        update();
+        window.addEventListener('pageshow', update);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { _recordCurrent(); _inject(); });
+    } else {
+        _recordCurrent();
+        _inject();
+    }
+})();
+
+// ---- GOOGLE & GITHUB AUTHENTICATION (OAuth) ----
+// The platform is a static, frontend-only site (GitHub Pages, localStorage users).
+// Google: Google Identity Services (official client-side flow; uses only a public
+//   client ID, so no secret is required or exposed).
+// GitHub: OAuth Web Application flow wired to read its client id/secret from a
+//   runtime config object (window.EDUAI_OAUTH_CONFIG) rather than hard-coding.
+// Credentials are never committed; when missing the flow fails gracefully.
+window.EduAI.SocialAuth = (function() {
+    const USER_LIST_KEY = 'eduai_users';
+    const SESSION_KEY   = 'eduai_current_user';
+
+    function _cfg() {
+        const c = (window.EDUAI_OAUTH_CONFIG && window.EDUAI_OAUTH_CONFIG.oAuth) || {};
+        return {
+            googleClientId: c.googleClientId || c.GOOGLE_CLIENT_ID || '',
+            githubClientId: c.githubClientId || c.GITHUB_CLIENT_ID || '',
+            githubClientSecret: c.githubClientSecret || c.GITHUB_CLIENT_SECRET || '',
+            redirectUri: c.redirectUri || (location.protocol + '//' + location.host + location.pathname),
+            scope: c.scope || 'openid email profile'
+        };
+    }
+
+    function _getUsers() { try { return JSON.parse(localStorage.getItem(USER_LIST_KEY) || '[]'); } catch(e){ return []; } }
+    function _saveUsers(u) { try { localStorage.setItem(USER_LIST_KEY, JSON.stringify(u)); } catch(e){} }
+
+    // Find OR create a local account by email, then log the user in.
+    function _upsertAndLogin(profile, provider) {
+        const email = (profile.email || '').toLowerCase();
+        const users = _getUsers();
+        let user = users.find(u => u.email && u.email.toLowerCase() === email);
+        if (user) {
+            // Existing account: preserve role and record the external identity.
+            if ((user.role || 'student') === 'admin') {
+                showToast('⛔ This account is an administrator. Use the Admin login.', 'error', 4000);
+                return;
+            }
+        } else {
+            user = {
+                name: profile.name || profile.givenName || email.split('@')[0] || 'User',
+                email: email,
+                role: 'student',
+                level: 'intermediate',
+                xp: 0, streak: 0, badges: [],
+                joinDate: new Date().toISOString(),
+                topicsProgress: {}
+            };
+            users.push(user);
+        }
+        user.provider = provider;
+        if (profile.picture) user.avatar = profile.picture;
+        user.lastLogin = new Date().toISOString();
+        _saveUsers(users);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+        showToast('✅ Welcome, ' + (user.name || email) + '!', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
+    }
+
+    // Decode a Google ID token (JWT payload) — no secret required.
+    function _decodeJwt(token) {
+        try {
+            const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const padded = payload + '='.repeat((4 - payload.length % 4) % 4);
+            return JSON.parse(decodeURIComponent(escape(atob(padded))));
+        } catch(e) { return null; }
+    }
+
+    // ── Google Identity Services ──────────────────────────────
+    function _loadGisScript(onReady) {
+        if (window.google && window.google.accounts) { onReady(); return; }
+        const s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true; s.defer = true;
+        s.onload = onReady;
+        s.onerror = function() { showToast('⚠️ Could not load Google Sign-In.', 'error'); };
+        document.head.appendChild(s);
+    }
+
+    function startGoogle() {
+        const cfg = _cfg();
+        if (!cfg.googleClientId) {
+            showToast('⚠️ Google Sign-In not configured. Set GOOGLE_CLIENT_ID.', 'error', 5000);
+            return;
+        }
+        _loadGisScript(function() {
+            window.google.accounts.id.initialize({
+                client_id: cfg.googleClientId,
+                auto_select: true,
+                callback: function(resp) {
+                    if (resp && resp.credential) {
+                        const payload = _decodeJwt(resp.credential);
+                        if (!payload || !payload.email) { showToast('⚠️ Google sign-in returned no profile.', 'error'); return; }
+                        _upsertAndLogin({
+                            email: payload.email,
+                            name: payload.name,
+                            picture: payload.picture,
+                            givenName: payload.given_name
+                        }, 'google');
+                    } else {
+                        showToast('Google Sign-In was cancelled.', 'info');
+                    }
+                }
+            });
+            window.google.accounts.id.prompt();
+        });
+    }
+
+    // ── GitHub OAuth (Web Application flow) ───────────────────
+    function startGithub() {
+        const cfg = _cfg();
+        if (!cfg.githubClientId) {
+            showToast('⚠️ GitHub Sign-In not configured. Set GITHUB_CLIENT_ID.', 'error', 5000);
+            return;
+        }
+        // Build GitHub authorization URL and redirect to it.
+        const params = new URLSearchParams({
+            client_id: cfg.githubClientId,
+            redirect_uri: cfg.redirectUri,
+            scope: 'read:user user:email'
+        });
+        location.href = 'https://github.com/login/oauth/authorize?' + params.toString();
+    }
+
+    // Exchange a GitHub callback `code` for an access token, then fetch the user.
+    function _finishGithub(code) {
+        const cfg = _cfg();
+        if (!cfg.githubClientId || !cfg.githubClientSecret) {
+            showToast('⚠️ GitHub Sign-In not configured (client secret missing).', 'error', 5000);
+            return;
+        }
+        const body = new URLSearchParams();
+        body.append('client_id', cfg.githubClientId);
+        body.append('client_secret', cfg.githubClientSecret);
+        body.append('code', code);
+        body.append('redirect_uri', cfg.redirectUri);
+
+        fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        })
+        .then(r => r.json())
+        .then(function(tokenData) {
+            const token = tokenData.access_token;
+            if (!token) {
+                const err = tokenData.error_description || tokenData.error || 'authorization failed';
+                showToast('GitHub sign-in failed: ' + err, 'error', 5000);
+                return;
+            }
+            return Promise.all([
+                fetch('https://api.github.com/user', { headers: { 'Authorization': 'token ' + token } }).then(r => r.json()),
+                fetch('https://api.github.com/user/emails', { headers: { 'Authorization': 'token ' + token } }).then(r => r.json())
+            ]).then(function(results) {
+                const ghUser = results[0];
+                const emails = results[1];
+                const primary = (Array.isArray(emails) ? emails.find(e => e.primary && e.verified) : null) ||
+                    (Array.isArray(emails) ? emails[0] : null);
+                _upsertAndLogin({
+                    email: (ghUser.email) || (primary && primary.email) || (ghUser.login + '@users.noreply.github.com'),
+                    name: ghUser.name || ghUser.login,
+                    picture: ghUser.avatar_url,
+                    givenName: ghUser.login
+                }, 'github');
+            });
+        })
+        .catch(function(e) { showToast('GitHub sign-in error: ' + e.message, 'error', 5000); });
+    }
+
+    // Wire the existing social buttons on the auth page.
+    function init() {
+        const googleBtn = document.querySelector('.social-btn.google-btn');
+        const githubBtn = document.querySelector('.social-btn.github-btn');
+        if (googleBtn) googleBtn.onclick = function(e) { e.preventDefault(); startGoogle(); };
+        if (githubBtn) githubBtn.onclick = function(e) { e.preventDefault(); startGithub(); };
+
+        // Handle inbound OAuth callbacks on auth.html.
+        const params = new URLSearchParams(location.search);
+        if (params.get('oauth') === 'github' && params.get('code')) {
+            _finishGithub(params.get('code'));
+        } else if (params.get('oauth') === 'github') {
+            showToast('GitHub Sign-In was cancelled.', 'info');
+        }
+    }
+
+    // Run on load (auth.html includes platform.js; harmless elsewhere).
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    return { init: init, startGoogle: startGoogle, startGithub: startGithub };
+})();
+
 // ---- EXPORT ----
-window.EduAI = {
+window.EduAI = Object.assign(window.EduAI || {}, {
     showToast,
     launchConfetti,
     toggleTheme,
@@ -318,7 +602,9 @@ window.EduAI = {
     saveQuizProgress,
     loadQuizProgress,
     clearQuizProgress,
-};
+    goBack: window.EduAI.goBack,
+    SocialAuth: window.EduAI.SocialAuth,
+});
 
 
 /* ============================================================
@@ -568,7 +854,7 @@ window.EduAI = {
             let users = this.getAllUsers().filter(u => u.email !== email);
             localStorage.setItem('eduai_users', JSON.stringify(users));
             // Also clear their personal data keys
-            ['eduai_field_', 'eduai_questions_', 'eduai_college_'].forEach(prefix => {
+            ['eduai_field_', 'eduai_questions_', 'eduai_college_', 'eduai_history_', 'eduai_analytics_', 'eduai_profile_'].forEach(prefix => {
                 localStorage.removeItem(prefix + email.toLowerCase().trim());
             });
             showToast(`✅ User ${email} deleted.`, 'success');
@@ -654,6 +940,371 @@ window.EduAI = {
         enforceAccess:    enforceAccess,
         applyDashboardNav: applyDashboardNav,
         injectAdminPanel:  injectAdminPanel,
+    };
+
+})();
+
+
+/* ============================================================
+   ACCOUNT PERSONALIZATION & EXPERIENCE ENGINE
+   Single source of truth for student identity, faculty/
+   specialization, experience, quiz/exam history, analytics,
+   achievements and leaderboard.
+
+   The site is fully static (GitHub Pages, localStorage-backed).
+   The AUTHORITATIVE persistent record for every student is the
+   matching object inside the `eduai_users` array (keyed by the
+   lower-cased email). `eduai_current_user` is only a cached
+   snapshot that is re-synced from the authoritative record on
+   every meaningful operation, so a returning student is always
+   reconstructed from their account and never loses state.
+
+   New students are created in a clean initial state (XP 0, no
+   history, no fabricated data) and every experience change is a
+   traceable, account-scoped result of real activity.
+   ============================================================ */
+(function initPersonalizationEngine() {
+
+    var USERS_KEY    = 'eduai_users';
+    var SESSION_KEY  = 'eduai_current_user';
+    var HIST_PREFIX  = 'eduai_history_';      // per-account quiz/exam history
+    var ANALYTICS    = 'eduai_analytics_';    // per-account learner stats
+    var PROFILE_KEY  = 'eduai_profile_';      // per-account academic profile
+
+    function _normEmail(e) { return String(e || '').trim().toLowerCase(); }
+
+    function _readUsers() {
+        try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+        catch (e) { return []; }
+    }
+    function _writeUsers(u) {
+        try { localStorage.setItem(USERS_KEY, JSON.stringify(u)); } catch (e) {}
+    }
+    function _session() {
+        try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
+        catch (e) { return null; }
+    }
+
+    // The authoritative user record for the current (or given) account. Falls
+    // back to the session snapshot, then to a clean initial state.
+    function _authoritative(email) {
+        var users = _readUsers();
+        var em = _normEmail(email || (_session() || {}).email);
+        var rec = users.find(function (u) { return _normEmail(u.email) === em; });
+        if (rec) return rec;
+        var snap = _session();
+        if (snap && _normEmail(snap.email) === em) return snap;
+        return null;
+    }
+
+    // Re-sync the session snapshot from the authoritative store so that the
+    // dashboard and every module see the exact persisted values.
+    function _resyncSession() {
+        var snap = _session();
+        if (!snap || !snap.email) return;
+        var rec = _readUsers().find(function (u) { return _normEmail(u.email) === _normEmail(snap.email); });
+        if (rec) localStorage.setItem(SESSION_KEY, JSON.stringify(rec));
+    }
+
+    // Persist the authoritative record to BOTH stores (source of truth + cache).
+    function _commit(user) {
+        if (!user || !user.email) return user;
+        var users = _readUsers();
+        var em = _normEmail(user.email);
+        var idx = users.findIndex(function (u) { return _normEmail(u.email) === em; });
+        if (idx >= 0) users[idx] = user; else users.push(user);
+        _writeUsers(users);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+        return user;
+    }
+
+    // ── Per-account history / analytics / profile stores ──────
+    function _histKey(email)  { return HIST_PREFIX  + _normEmail(email); }
+    function _anKey(email)    { return ANALYTICS    + _normEmail(email); }
+    function _pfKey(email)    { return PROFILE_KEY  + _normEmail(email); }
+
+    function _readHist(record) {
+        try { return JSON.parse(localStorage.getItem(_histKey(record.email)) || '[]'); }
+        catch (e) { return []; }
+    }
+    function _writeHist(record, hist) {
+        try { localStorage.setItem(_histKey(record.email), JSON.stringify(hist)); } catch (e) {}
+    }
+    function _readAn(record) {
+        try { return JSON.parse(localStorage.getItem(_anKey(record.email)) || 'null'); }
+        catch (e) { return null; }
+    }
+
+    // ── Experience / XP table (traceable, deterministic) ──────
+    // Every XP unit maps to a named source so a student's experience can always
+    // be explained. No random or fabricated values are generated anywhere.
+    function calculateBreakdown(result) {
+        var correct   = result.score || 0;
+        var total     = result.totalQuestions || correct;
+        var streak    = result.maxStreak || 0;
+        var hintsUsed = result.hintsUsed || 0;
+        var perfect   = total > 0 && correct === total;
+
+        var breakdown = { correct: 0, streakBonus: 0, noHints: 0, perfect: 0, highScore: 0 };
+        breakdown.correct = correct * 10;
+        if (streak >= 10) breakdown.streakBonus += 50;
+        else if (streak >= 5) breakdown.streakBonus += 25;
+        if (hintsUsed === 0) breakdown.noHints = 15;
+        if (perfect) breakdown.perfect = 50;
+        else if (total > 0 && (correct / total) >= 0.8) breakdown.highScore = 20;
+        var totalXp = breakdown.correct + breakdown.streakBonus + breakdown.noHints + breakdown.perfect + breakdown.highScore;
+        return { breakdown: breakdown, total: totalXp };
+    }
+
+    // Deterministic badge evaluation from real activity. Never grants badges
+    // the student has not earned.
+    function evaluateAchievements(record, hist) {
+        var earned = record.badges || [];
+        var newly = [];
+
+        function grant(id, label, icon) {
+            if (!earned.includes(id)) { earned.push(id); newly.push({ id: id, label: label, icon: icon }); }
+        }
+
+        var correctTotal = 0, answeredTotal = 0, quizzes = 0, bestRank = null;
+        hist.forEach(function (h) {
+            quizzes++;
+            correctTotal += h.score || 0;
+            answeredTotal += h.totalQuestions || (h.score || 0);
+            if (typeof h.rank === 'number' && (bestRank === null || h.rank < bestRank)) bestRank = h.rank;
+        });
+
+        if (quizzes >= 1) grant('first_quiz', 'First Steps', 'fa-star');
+        if (quizzes >= 10) grant('scholar', 'Scholar', 'fa-graduation-cap');
+        if (hist.some(function (h) { return h.maxStreak >= 5; })) grant('streak_5', 'On Fire!', 'fa-fire');
+        if (hist.some(function (h) { return h.score === h.totalQuestions && h.totalQuestions > 0; })) grant('perfect', 'Perfectionist', 'fa-crown');
+        if (answeredTotal > 0 && (correctTotal / answeredTotal) >= 0.9) grant('accuracy_90', 'Sharpshooter', 'fa-bullseye');
+        if (bestRank !== null && bestRank <= 3) grant('top3', 'Elite', 'fa-trophy');
+
+        record.badges = earned;
+        return newly;
+    }
+
+    // Recompute the learner analytics aggregate from the real history.
+    function computeAnalytics(record) {
+        var hist = _readHist(record);
+        var q = hist.length;
+        var correct = 0, answered = 0, time = 0, streaks = [], byDate = {};
+        hist.forEach(function (h) {
+            correct += h.score || 0;
+            answered += h.totalQuestions || (h.score || 0);
+            time += h.timeTaken || 0;
+            if (typeof h.maxStreak === 'number') streaks.push(h.maxStreak);
+            var d = (h.date || '').slice(0, 10);
+            if (d) byDate[d] = (byDate[d] || 0) + (h.timeTaken || 0);
+        });
+        var rate = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+        var agg = {
+            quizzes: q,
+            correctCount: correct,
+            wrongCount: answered - correct,
+            skippedCount: 0,
+            successRate: rate,
+            totalStudyTime: time,
+            avgTime: q > 0 ? Math.round(time / q) : 0,
+            bestStreak: streaks.length ? Math.max.apply(null, streaks) : 0,
+            weakTopics: [],
+            strongTopics: [],
+            byDate: byDate
+        };
+        return agg;
+    }
+
+    // ── Public API ────────────────────────────────────────────
+    window.EduAI.Profile = {
+        // Return the authoritative account record (clean initial state for a
+        // brand-new student: XP 0, no history, no fabricated data).
+        get: function () {
+            var snap = _session();
+            if (!snap || !snap.email) return null;
+            var rec = _authoritative(snap.email);
+            if (!rec) return null;
+            if (!rec.topicsProgress) rec.topicsProgress = {};
+            return rec;
+        },
+        // Merge academic context into the authoritative record (single source).
+        setAcademicContext: function (ctx, opts) {
+            opts = opts || {};
+            var snap = _session();
+            if (!snap) return null;
+            var rec = _authoritative(snap.email) || snap;
+            if (ctx.faculty !== undefined) rec.faculty = ctx.faculty;
+            if (ctx.collegeId !== undefined) rec.collegeId = ctx.collegeId;
+            if (ctx.specialization !== undefined) rec.specialization = ctx.specialization;
+            if (ctx.department !== undefined) rec.department = ctx.department;
+            if (ctx.level !== undefined) rec.level = ctx.level;
+            if (ctx.courses !== undefined) rec.courses = ctx.courses;
+            if (ctx.preferences !== undefined) rec.preferences = ctx.preferences;
+            return _commit(rec);
+        },
+        // Back-fill academic context from the legacy per-account keys
+        // (eduai_college_<email> / eduai_field_<email>) and expose it.
+        loadAcademicContext: function () {
+            var snap = _session();
+            if (!snap) return { faculty: '', collegeId: '', specialization: '', department: '', level: 'beginner' };
+            var em = _normEmail(snap.email);
+            var rec = _authoritative(em) || snap;
+            var collegeRaw = localStorage.getItem('eduai_college_' + em) || '';
+            var field = localStorage.getItem('eduai_field_' + em) || '';
+            var collegeName = '';
+            try {
+                var parsed = JSON.parse(collegeRaw);
+                collegeName = parsed.name || '';
+                if (!rec.collegeId) rec.collegeId = parsed.id || '';
+            } catch (e) { collegeName = collegeRaw; }
+            if (!rec.faculty) rec.faculty = collegeName;
+            if (!rec.specialization) rec.specialization = field;
+            if (!rec.level) rec.level = snap.level || 'beginner';
+            _commit(rec);
+            return {
+                faculty: rec.faculty || '',
+                collegeId: rec.collegeId || '',
+                specialization: rec.specialization || '',
+                department: rec.department || '',
+                level: rec.level || 'beginner'
+            };
+        },
+        // Reconcile the session snapshot from the authoritative record so a
+        // returning student gets their exact persisted state.
+        reconcile: function () { _resyncSession(); }
+    };
+
+    window.EduAI.History = {
+        getAll: function () {
+            var rec = window.EduAI.Profile.get();
+            return rec ? _readHist(rec) : [];
+        },
+        // Append a completed exam/quiz.
+        add: function (entry, opts) {
+            opts = opts || {};
+            var rec = window.EduAI.Profile.get();
+            if (!rec) return null;
+            var hist = _readHist(rec);
+
+            // Guard: a result already recorded for this run's unique id is an
+            // accidental duplicate (e.g. double render of the results page).
+            if (entry.rid && hist.some(function (h) { return h.rid === entry.rid; })) {
+                return null;
+            }
+            if (!entry.rid) entry.rid = 'h' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            hist.push(entry);
+            if (hist.length > 500) hist = hist.slice(hist.length - 500);
+            _writeHist(rec, hist);
+            return entry;
+        }
+    };
+
+    window.EduAI.Experience = {
+        // Single authoritative path for awarding experience + recognising
+        // achievements from a completed exam. Called ONCE per completed exam.
+        recordResult: function (result, opts) {
+            opts = opts || {};
+            var rec = window.EduAI.Profile.get();
+            if (!rec) return null;
+
+            var calc = calculateBreakdown(result);
+            var xpToAward = calc.total;
+
+            // Persist history first (dedup via rid).
+            var stored = window.EduAI.History.add({
+                rid: result.rid,
+                type: result.type || 'quiz',
+                field: result.field || rec.specialization || '',
+                faculty: result.faculty || rec.faculty || '',
+                score: result.score || 0,
+                totalQuestions: result.totalQuestions || (result.score || 0),
+                xp: xpToAward,
+                maxStreak: result.maxStreak || 0,
+                timeTaken: result.timeTaken || 0,
+                hintsUsed: result.hintsUsed || 0,
+                date: new Date().toISOString(),
+                rank: typeof result.rank === 'number' ? result.rank : undefined,
+                source: 'real_activity'
+            });
+            if (!stored && !opts.force) {
+                // Already recorded for this run — do not re-apply XP.
+                return { duplicate: true, total: 0 };
+            }
+
+            var appliedXp = stored ? xpToAward : 0;
+            rec.xp = (rec.xp || 0) + appliedXp;
+            rec.streak = Math.max(rec.streak || 0, result.maxStreak || 0);
+
+            // Recognise achievements from real activity only.
+            var hist = _readHist(rec);
+            var newly = evaluateAchievements(rec, hist);
+            if (!rec.badges) rec.badges = [];
+
+            // Persist analytics aggregate (real data).
+            var agg = computeAnalytics(rec);
+            try { localStorage.setItem(_anKey(rec.email), JSON.stringify(agg)); } catch (e) {}
+
+            _commit(rec);
+            return { total: appliedXp, breakdown: calc.breakdown, achievements: newly };
+        },
+        // Give the student nothing extra; this is purely a helper for queries.
+        applyBadges: function () {
+            var rec = window.EduAI.Profile.get();
+            if (!rec) return [];
+            var newly = evaluateAchievements(rec, _readHist(rec));
+            if (newly.length) _commit(rec);
+            return newly;
+        }
+    };
+
+    window.EduAI.Analytics = {
+        get: function () {
+            var rec = window.EduAI.Profile.get();
+            if (!rec) return null;
+            var stored = _readAn(rec);
+            if (stored) return stored;
+            var agg = computeAnalytics(rec);
+            try { localStorage.setItem(_anKey(rec.email), JSON.stringify(agg)); } catch (e) {}
+            return agg;
+        },
+        recompute: function () {
+            var rec = window.EduAI.Profile.get();
+            if (!rec) return null;
+            var agg = computeAnalytics(rec);
+            try { localStorage.setItem(_anKey(rec.email), JSON.stringify(agg)); } catch (e) {}
+            return agg;
+        }
+    };
+
+    window.EduAI.Achievements = {
+        catalog: [
+            { id: 'first_quiz',   icon: 'fas fa-star',           label: 'First Steps',      desc: 'Complete your first quiz',      color: '#ffd700' },
+            { id: 'scholar',      icon: 'fas fa-graduation-cap', label: 'Scholar',          desc: 'Complete 10 quizzes',           color: '#3b82f6' },
+            { id: 'streak_5',     icon: 'fas fa-fire',           label: 'On Fire!',         desc: 'Maintain a 5-answer streak',    color: '#f7931e' },
+            { id: 'perfect',      icon: 'fas fa-crown',          label: 'Perfectionist',    desc: 'Score 100% on a quiz',          color: '#a855f7' },
+            { id: 'accuracy_90',  icon: 'fas fa-bullseye',       label: 'Sharpshooter',     desc: 'Maintain 90% accuracy',         color: '#10b981' },
+            { id: 'top3',         icon: 'fas fa-trophy',         label: 'Elite',            desc: 'Reach top 3 on leaderboard',    color: '#f59e0b' }
+        ],
+        earned: function () {
+            var rec = window.EduAI.Profile.get();
+            if (!rec) return [];
+            return rec.badges || [];
+        },
+        // Persisted, real ranking across all accounts (XP from real activity).
+        leaderboard: function () {
+            var users = _readUsers().filter(function (u) { return (u.role || 'student') === 'student'; });
+            return users
+                .map(function (u) {
+                    return {
+                        name: u.name || 'Student',
+                        email: _normEmail(u.email),
+                        avatar: (u.name || 'S').split(' ').map(function (n) { return n[0]; }).join('').toUpperCase().slice(0, 2),
+                        xp: u.xp || 0,
+                        streak: u.streak || 0
+                    };
+                })
+                .sort(function (a, b) { return b.xp - a.xp; });
+        }
     };
 
 })();
