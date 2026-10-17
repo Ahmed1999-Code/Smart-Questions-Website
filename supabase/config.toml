@@ -1,0 +1,16 @@
+# Supabase local/remote function configuration for EduAI Pro.
+# Deploy with: supabase functions deploy <name>
+project_id = "eduai-pro"
+
+[functions.bootstrap-admin]
+# Uses a custom shared secret, not a Supabase JWT.
+verify_jwt = false
+
+[functions.invite-instructor]
+verify_jwt = true
+
+[functions.accept-invite]
+verify_jwt = true
+
+[functions.log-event]
+verify_jwt = true

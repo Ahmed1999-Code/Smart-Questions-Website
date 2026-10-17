@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accept Instructor Invitation – EduAI Pro</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="platform.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="auth-body">
+    <div class="auth-bg">
+        <div class="auth-orb auth-orb-1"></div>
+        <div class="auth-orb auth-orb-2"></div>
+    </div>
+
+    <div class="auth-page-wrapper" style="grid-template-columns:1fr;">
+        <div class="auth-right-panel">
+            <div class="auth-card">
+                <div class="auth-form-header">
+                    <h2>Instructor Invitation</h2>
+                    <p id="ai-sub">Verifying your invitation…</p>
+                </div>
+                <div id="ai-error" class="auth-error" style="display:none"></div>
+                <div id="ai-success" class="auth-success" style="display:none"></div>
+
+                <div id="ai-actions" style="display:none">
+                    <button class="btn-auth-submit" id="ai-btn" onclick="redeem()">
+                        <span><i class="fas fa-check-circle"></i> Accept &amp; Become Instructor</span>
+                        <div class="btn-loader" style="display:none"><i class="fas fa-spinner fa-spin"></i></div>
+                    </button>
+                </div>
+                <p class="auth-switch-text"><a href="auth.html">Back to sign in</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="lib/supabase-client.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token') || '';
+        const invitedEmail = (params.get('email') || '').toLowerCase();
+
+        function show(id, m) { const e = document.getElementById(id); e.textContent = m; e.style.display = 'flex'; }
+        function hide(...ids) { ids.forEach(i => { const e = document.getElementById(i); if (e) e.style.display = 'none'; }); }
+
+        async function redeem() {
+            hide('ai-error', 'ai-success');
+            const btn = document.getElementById('ai-btn');
+            btn.querySelector('span').style.display = 'none';
+            btn.querySelector('.btn-loader').style.display = 'block';
+            btn.disabled = true;
+            try {
+                await window.EduAIAuth.callFunction('accept-invite', { token });
+                show('ai-success', '✅ You are now an Instructor! Redirecting…');
+                setTimeout(() => window.location.replace('instructor.html'), 1200);
+            } catch (e) {
+                btn.querySelector('span').style.display = '';
+                btn.querySelector('.btn-loader').style.display = 'none';
+                btn.disabled = false;
+                show('ai-error', (e && e.message) || 'Could not accept the invitation.');
+            }
+        }
+
+        (async function init() {
+            if (!token) { document.getElementById('ai-sub').textContent = ''; show('ai-error', 'Missing invitation token.'); return; }
+
+            const session = await window.EduAIAuth.getSession();
+            if (!session) {
+                document.getElementById('ai-sub').textContent = '';
+                show('ai-error', `Please sign in or create an account with ${invitedEmail || 'the invited email'} first.`);
+                const a = document.createElement('a');
+                a.className = 'btn-auth-submit';
+                a.style.cssText = 'display:block;text-align:center;margin-top:8px;text-decoration:none';
+                a.href = 'auth.html?next=' + encodeURIComponent('accept-invite.html?token=' + encodeURIComponent(token) + '&email=' + encodeURIComponent(invitedEmail));
+                a.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign in / Sign up';
+                document.getElementById('ai-actions').appendChild(a);
+                document.getElementById('ai-actions').style.display = 'block';
+                return;
+            }
+
+            const profile = await window.EduAIAuth.getProfile();
+            if (invitedEmail && profile && String(profile.email).toLowerCase() !== invitedEmail) {
+                document.getElementById('ai-sub').textContent = '';
+                show('ai-error', `This invitation is for ${invitedEmail}. You are signed in as ${profile.email}.`);
+                return;
+            }
+            document.getElementById('ai-sub').textContent = `Hello ${profile && profile.full_name ? profile.full_name : ''} — confirm to accept your invitation.`;
+            document.getElementById('ai-actions').style.display = 'block';
+        })();
+    </script>
+</body>
+</html>
