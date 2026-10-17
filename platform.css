@@ -830,8 +830,9 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text);
 .skip-dot { background: var(--warn); }
 .weak-topics-list, .strong-topics-list { display: flex; flex-direction: column; gap: 14px; }
 .weak-topic-item { display: flex; flex-direction: column; gap: 6px; }
-.wt-info { display: flex; justify-content: space-between; font-size: 0.85rem; }
-.wt-score { font-weight: 700; color: var(--danger); }
+.wt-info { display: flex; justify-content: space-between; font-size: 0.85rem; gap: 8px; }
+.wt-name { color: var(--text2); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-score { font-weight: 700; color: var(--danger); flex-shrink: 0; }
 .wt-bar { height: 6px; background: var(--bg3); border-radius: 6px; overflow: hidden; }
 .wt-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f7931e); border-radius: 6px; }
 .wt-practice-btn { align-self: flex-start; padding: 4px 12px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; }

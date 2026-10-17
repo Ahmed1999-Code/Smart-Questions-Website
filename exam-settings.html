@@ -163,6 +163,7 @@ body{margin:0;min-height:100vh;background:#0d0f1a;font-family:'Inter',sans-serif
   <div class="es-footer-info">
     <strong id="footer-q-info">Questions ready</strong>
     <small id="footer-mode-info">Uniform format &middot; Sequential &middot; 60s per question &middot; Pass: 50%</small>
+    <div id="es-notice" style="display:none;margin-top:8px;padding:6px 12px;border:1px solid;border-radius:8px;font-size:0.78rem;align-items:center;gap:7px;"></div>
   </div>
   <button class="es-launch-btn" id="launch-btn" onclick="launchExam()">
     <i class="fas fa-rocket"></i> Launch Exam
@@ -182,6 +183,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 let formatMode = 'uniform';
 let questionOrder = 'sequential';
+
+// Non-blocking, accessible notice (never an alert) for scope/permission states.
+function showEsNotice(msg, type) {
+  var host = document.getElementById('es-notice');
+  if (!host) return;
+  var color = type === 'warn' ? '#f7931e' : type === 'error' ? '#ef4444' : '#10b981';
+  var icon = type === 'warn' ? 'fa-triangle-exclamation' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+  host.innerHTML = '<i class="fas ' + icon + '"></i> ' + msg;
+  host.style.display = 'flex';
+  host.style.color = color;
+  host.style.borderColor = color;
+  host.style.background = color + '14';
+  clearTimeout(showEsNotice._t);
+  showEsNotice._t = setTimeout(function () { host.style.display = 'none'; }, 6000);
+}
 
 function _loadQs() {
   var s = sessionStorage.getItem('customQuestions');
@@ -242,6 +258,20 @@ if (window.EduAI && window.EduAI.ExamConfig) {
       if (pc.formatMode === 'custom') validateSplit();
     }
   }
+
+  // Surface exactly which academic scopes this instructor is authorised to
+  // publish formats to (real authority from the ExamConfig guard, not UI guess).
+  var scopes = (EduAI.ExamConfig.listScopes && EduAI.ExamConfig.listScopes()) || [];
+  var scopeEl = document.createElement('div');
+  scopeEl.style.cssText = 'margin-top:12px;padding:8px 14px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.22);border-radius:8px;font-size:0.8rem;color:#a9a3ff;display:flex;align-items:center;gap:8px;justify-content:center;';
+  if (scopes.indexOf('__all__') !== -1) {
+    scopeEl.innerHTML = '<i class="fas fa-globe"></i> You can publish formats to <strong style="color:#e8eaf0">any scope, including the global default</strong>.';
+  } else if (scopes.length) {
+    scopeEl.innerHTML = '<i class="fas fa-layer-group"></i> Publishing scope: <strong style="color:#e8eaf0">' + scopes.join(' · ') + '</strong>';
+  } else {
+    scopeEl.innerHTML = '<i class="fas fa-lock"></i> You have no exam-format publishing scope.';
+  }
+  document.querySelector('.es-hero').appendChild(scopeEl);
 }
 
 // ---- Read formats chosen on question-feed page ----
@@ -358,11 +388,21 @@ function launchExam() {
     var res = EduAI.ExamConfig.save(settings, scopeKey);
     if (res && res.denied) {
       console.warn('[ExamConfig] Denied persisting config to scope "' + scopeKey + '" — live session only.');
+      window._esPendingNotice = { msg: 'You are not authorised to publish to “' + field + '”. This format applies to your current session only.', type: 'warn' };
     }
   }
 
   sessionStorage.setItem('customQuestions', JSON.stringify(finalQs));
-  window.location.href = 'custom-quiz.html';
+
+  // If publishing was denied, briefly surface why before launching so the
+  // instructor understands the format is session-only. Otherwise go straight in.
+  if (window._esPendingNotice) {
+    showEsNotice(window._esPendingNotice.msg, window._esPendingNotice.type);
+    window._esPendingNotice = null;
+    setTimeout(function () { window.location.href = 'custom-quiz.html'; }, 1600);
+  } else {
+    window.location.href = 'custom-quiz.html';
+  }
 }
 
 updateFooter();

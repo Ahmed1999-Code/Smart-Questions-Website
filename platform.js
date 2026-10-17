@@ -1306,12 +1306,19 @@ window.EduAI = Object.assign(window.EduAI || {}, {
             var users = _readUsers().filter(function (u) { return (u.role || 'student') === 'student'; });
             return users
                 .map(function (u) {
+                    // Real success rate from this account's persisted analytics.
+                    var rate = null;
+                    try {
+                        var an = JSON.parse(localStorage.getItem('eduai_analytics_' + _normEmail(u.email)) || 'null');
+                        if (an && typeof an.successRate === 'number') rate = an.successRate;
+                    } catch (e) {}
                     return {
                         name: u.name || 'Student',
                         email: _normEmail(u.email),
                         avatar: (u.name || 'S').split(' ').map(function (n) { return n[0]; }).join('').toUpperCase().slice(0, 2),
                         xp: u.xp || 0,
-                        streak: u.streak || 0
+                        streak: u.streak || 0,
+                        rate: rate
                     };
                 })
                 .sort(function (a, b) { return b.xp - a.xp; });

@@ -1042,9 +1042,11 @@
 
         // Success rate & study time from REAL analytics (not a session guess).
         document.getElementById('stat-success-rate').textContent = successRate === null ? '—' : successRate + '%';
-        document.getElementById('stat-time').textContent = analytics
-            ? (Math.round((analytics.totalStudyTime || 0) / 60) + 'h')
-            : '0h';
+        // totalStudyTime is stored in SECONDS. Show hours when >= 1h, else minutes.
+        const totalSec = analytics ? (analytics.totalStudyTime || 0) : 0;
+        document.getElementById('stat-time').textContent = totalSec >= 3600
+            ? (totalSec / 3600).toFixed(1) + 'h'
+            : Math.round(totalSec / 60) + 'm';
 
         // XP Level
         const lvl = Math.floor(xp / 1000) + 1;
@@ -1068,10 +1070,13 @@
         }
 
         if (analytics) {
+            renderPerformanceOverviewReal(analytics);
             renderTopicMasteryReal(analytics);
             renderWeakStrongReal(analytics);
             renderStudyTimeReal(analytics);
             renderAIRecommendationReal(analytics);
+        } else {
+            renderPerformanceOverviewReal(null);
         }
         renderLearningPathReal(hist);
         renderAchievements();
@@ -1137,7 +1142,9 @@
 
     function renderAchievements() {
         const grid = document.getElementById('achievements-grid');
-        const userBadges = currentUser.badges || [];
+        const userBadges = (window.EduAI && window.EduAI.Achievements && window.EduAI.Achievements.earned)
+            ? (window.EduAI.Achievements.earned() || [])
+            : (currentUser.badges || []);
         grid.innerHTML = allAchievements.map(a => {
             const isEarned = userBadges.includes(a.id);
             return `<div class="achievement-card ${isEarned ? 'earned' : 'locked'}">
@@ -1155,37 +1162,63 @@
 
     // Leaderboard from the engine's real persisted ranking of student accounts.
     function renderLeaderboardReal(list) {
-        if (!list || !list.length) return;
         const body = document.getElementById('lb-list-body');
+        const podium = document.querySelector('.lb-podium');
+        if (!list || !list.length) {
+            // Never leave the mock placeholder rows visible for a real session.
+            if (body) body.innerHTML = '<div class="lb-row-full"><span class="lb-pos">—</span><div class="lb-avatar">—</div><span class="lb-n">No ranked students yet</span><span>0</span><span>—</span><span>—</span></div>';
+            if (podium) podium.innerHTML = '';
+            return;
+        }
         if (!body) return;
         const medals = ['🥇','🥈','🥉'];
         body.innerHTML = list.slice(0, 20).map((r, i) => {
             const rank = i + 1;
             const me = r.email.toLowerCase() === ((currentUser && currentUser.email) || '').toLowerCase();
             const cls = i === 0 ? 'lb-gold' : i === 1 ? 'lb-silver' : i === 2 ? 'lb-bronze' : '';
-            return `<div class="lb-row-full ${cls} ${me ? 'lb-you' : ''}"><span class="lb-pos">${medals[i] || rank}</span><div class="lb-avatar">${r.avatar}</div><span class="lb-n">${r.name}${me ? ' (You)' : ''}</span><span>${(r.xp||0).toLocaleString()}</span><span>🔥 ${r.streak||0}</span><span>${rank===1?'94%':''}</span></div>`;
+            return `<div class="lb-row-full ${cls} ${me ? 'lb-you' : ''}"><span class="lb-pos">${medals[i] || rank}</span><div class="lb-avatar">${r.avatar}</div><span class="lb-n">${r.name}${me ? ' (You)' : ''}</span><span>${(r.xp||0).toLocaleString()}</span><span>🔥 ${r.streak||0}</span><span>${r.rate === null || r.rate === undefined ? '—' : r.rate + '%'}</span></div>`;
         }).join('');
 
         // Rebuild the podium from the real top 3 (no fabricated names).
-        const podium = document.querySelector('.lb-podium');
-        if (!podium || list.length === 0) return;
-        const top3 = list.slice(0, 3);
-        // positions: [0]=silver(2nd) left, [1]=gold(1st) middle, [2]=bronze(3rd) right
-        const ordered = [top3[1], top3[0], top3[2]].filter(Boolean);
-        const heights = ['110px','80px','60px'];
-        const grads = ['linear-gradient(135deg,#ffd700,#ffaa00)','linear-gradient(135deg,#b0bec5,#90a4ae)','linear-gradient(135deg,#cd7f32,#b5651d)'];
-        const ms = ['🥇','🥈','🥉'];
-        const positions = ordered.map((r, i) => {
+        if (!podium) return;
+        const ranked = list.slice(0, 3).map((r, i) => ({ r, rank: i + 1 }));
+        // Visual slots left→right: 2nd, 1st, 3rd (gold stays centered).
+        const ordered = [ranked[1], ranked[0], ranked[2]].filter(Boolean);
+        const byRank = {
+            1: { cls:'gold',   h:'110px', grad:'linear-gradient(135deg,#ffd700,#ffaa00)', medal:'🥇', label:'1st' },
+            2: { cls:'silver', h:'80px',  grad:'linear-gradient(135deg,#b0bec5,#90a4ae)', medal:'🥈', label:'2nd' },
+            3: { cls:'bronze', h:'60px',  grad:'linear-gradient(135deg,#cd7f32,#b5651d)', medal:'🥉', label:'3rd' }
+        };
+        const positions = ordered.map(({ r, rank }) => {
+            const s = byRank[rank];
             const me = r.email.toLowerCase() === ((currentUser && currentUser.email) || '').toLowerCase();
-            return `<div class="podium-item ${i===0?'gold':i===1?'silver':'bronze'}">
+            return `<div class="podium-item ${s.cls}">
                 <div class="podium-avatar">${r.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
                 <div class="podium-name">${r.name}${me ? ' (You)' : ''}</div>
                 <div class="podium-xp">${(r.xp||0).toLocaleString()} XP</div>
-                <div class="podium-rank">${ms[i===0?0:i===1?1:2]} ${i===0?'1st':i===1?'2nd':'3rd'}</div>
-                <div class="podium-block" style="height:${heights[i]};background:${grads[i]}"></div>
+                <div class="podium-rank">${s.medal} ${s.label}</div>
+                <div class="podium-block" style="height:${s.h};background:${s.grad}"></div>
             </div>`;
         }).join('');
         podium.innerHTML = positions;
+    }
+
+    // Performance overview ring + correct/wrong/skipped from real analytics.
+    function renderPerformanceOverviewReal(analytics) {
+        const pct = analytics ? (analytics.successRate || 0) : 0;
+        const pctEl = document.getElementById('perf-pct-label');
+        if (pctEl) pctEl.textContent = pct + '%';
+        const ring = document.getElementById('perf-fill-circle');
+        if (ring) {
+            const circ = 264; // 2 * PI * r(42) ≈ 264
+            ring.setAttribute('stroke-dashoffset', String(Math.round(circ * (1 - pct / 100))));
+        }
+        const c = document.getElementById('pb-correct');
+        const w = document.getElementById('pb-wrong');
+        const s = document.getElementById('pb-skip');
+        if (c) c.textContent = (analytics ? analytics.correctCount : 0) || 0;
+        if (w) w.textContent = (analytics ? analytics.wrongCount : 0) || 0;
+        if (s) s.textContent = (analytics ? analytics.skippedCount : 0) || 0;
     }
 
     // Topic mastery bars from real per-topic analytics.
@@ -1232,15 +1265,18 @@
         const rows = days.map((d, i) => {
             const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
             const iso = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
-            const mins = byDate[iso] || 0;
-            const h = Math.min(100, Math.round((mins / 60) / 60 * 100) || (mins > 0 ? 8 : 2));
-            return { d, mins, h };
+            const sec = byDate[iso] || 0;              // stored in seconds
+            const mins = sec / 60;
+            // Bar scale: 2 hours of study fills a day's bar.
+            const h = Math.min(100, Math.round((mins / 120) * 100));
+            const label = mins >= 60 ? (mins / 60).toFixed(1) + 'h' : (mins > 0 ? Math.round(mins) + 'm' : '—');
+            return { d, label, h };
         });
         chart.innerHTML = rows.map(r => `
             <div class="week-bar-group">
                 <div class="week-bar-label">${r.d}</div>
-                <div class="week-bar-track"><div class="week-bar-fill" style="height:${Math.max(4, r.h)}%"></div></div>
-                <div class="week-bar-val">${r.mins > 0 ? Math.round(r.mins) + 'm' : '—'}</div>
+                <div class="week-bar-track"><div class="week-bar-fill" style="height:${Math.max(r.h > 0 ? 4 : 0, r.h)}%"></div></div>
+                <div class="week-bar-val">${r.label}</div>
             </div>`).join('');
     }
 
