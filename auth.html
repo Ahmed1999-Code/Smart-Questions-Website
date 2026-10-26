@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login / Sign Up – EduAI Pro</title>
     <meta name="description" content="Sign in or create your EduAI Pro account to start your personalized AI learning journey.">
-    <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="platform.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -82,7 +81,7 @@
             <div class="auth-card">
 
                 <!-- Tab Switcher -->
-                <div class="auth-tabs" id="auth-tabs">
+                <div class="auth-tabs">
                     <button class="auth-tab active" id="login-tab" onclick="switchTab('login')">
                         <i class="fas fa-sign-in-alt"></i> Login
                     </button>
@@ -99,24 +98,63 @@
                     </div>
                     <div id="login-error" class="auth-error" style="display:none"></div>
 
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
-                        <input type="email" id="login-email" class="form-input" placeholder="your@email.com" autocomplete="email" required>
+                    <div class="auth-role-selector">
+                        <button class="role-btn active" id="student-role-login" onclick="selectRole('student','login')">
+                            <i class="fas fa-user-graduate"></i> Student
+                        </button>
+                        <button class="role-btn" id="teacher-role-login" onclick="selectRole('teacher','login')">
+                            <i class="fas fa-chalkboard-teacher"></i> Teacher
+                        </button>
+                        <button class="role-btn" id="admin-role-login" onclick="selectRole('admin','login')" style="border-color:rgba(239,68,68,0.3);">
+                            <i class="fas fa-user-shield" style="color:#ef4444"></i> <span style="color:#ef4444">Admin</span>
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
-                        <div class="password-wrap">
-                            <input type="password" id="login-password" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
-                            <button class="password-eye" type="button" onclick="togglePassword('login-password', this)">
-                                <i class="fas fa-eye"></i>
-                            </button>
+
+                    <!-- Standard fields: Student & Teacher -->
+                    <div id="login-standard-fields">
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-envelope"></i> Email or Username</label>
+                            <input type="text" id="login-email" class="form-input" placeholder="your@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+                            <div class="password-wrap">
+                                <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+                                <button class="password-eye" type="button" onclick="togglePassword('login-password', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-options">
+                            <label class="remember-me">
+                                <input type="checkbox" id="remember-me"> Remember me
+                            </label>
+                            <a href="#" class="forgot-link">Forgot password?</a>
                         </div>
                     </div>
-                    <div class="form-options">
-                        <label class="remember-me">
-                            <input type="checkbox" id="remember-me"> Remember me
-                        </label>
-                        <a href="#" class="forgot-link" onclick="switchTab('reset');return false;">Forgot password?</a>
+
+                    <!-- Admin-only credential block -->
+                    <div id="login-admin-fields" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25);margin-bottom:16px;">
+                            <i class="fas fa-shield-alt" style="color:#ef4444;font-size:1.1rem;"></i>
+                            <div>
+                                <div style="font-weight:700;color:#ef4444;font-size:0.85rem;letter-spacing:0.05em;">ADMINISTRATOR ACCESS</div>
+                                <div style="color:var(--text3);font-size:0.76rem;margin-top:2px;">Restricted to authorised platform owners only</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-user-shield" style="color:#ef4444"></i> Admin Username</label>
+                            <input type="text" id="admin-username" class="form-input" placeholder="Enter admin username" autocomplete="off" style="border-color:rgba(239,68,68,0.3);">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-key" style="color:#ef4444"></i> Admin Password</label>
+                            <div class="password-wrap">
+                                <input type="password" id="admin-password" class="form-input" placeholder="••••••••" autocomplete="off" style="border-color:rgba(239,68,68,0.3);">
+                                <button class="password-eye" type="button" onclick="togglePassword('admin-password', this)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <button class="btn-auth-submit" id="login-btn" onclick="handleLogin()">
@@ -126,8 +164,8 @@
 
                     <div class="auth-divider"><span>or continue with</span></div>
                     <div class="social-auth">
-                        <button class="social-btn google-btn" onclick="handleOAuth('google')"><i class="fab fa-google"></i> Google</button>
-                        <button class="social-btn github-btn" onclick="handleOAuth('github')"><i class="fab fa-github"></i> GitHub</button>
+                        <button class="social-btn google-btn"><i class="fab fa-google"></i> Google</button>
+                        <button class="social-btn github-btn"><i class="fab fa-github"></i> GitHub</button>
                     </div>
                     <p class="auth-switch-text">Don't have an account? <a onclick="switchTab('signup')">Sign up free</a></p>
                 </div>
@@ -141,24 +179,33 @@
                     <div id="signup-error" class="auth-error" style="display:none"></div>
                     <div id="signup-success" class="auth-success" style="display:none"></div>
 
+                    <div class="auth-role-selector">
+                        <button class="role-btn active" id="student-role-signup" onclick="selectRole('student','signup')">
+                            <i class="fas fa-user-graduate"></i> Student
+                        </button>
+                        <button class="role-btn" id="teacher-role-signup" onclick="selectRole('teacher','signup')">
+                            <i class="fas fa-chalkboard-teacher"></i> Teacher
+                        </button>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label"><i class="fas fa-user"></i> First Name</label>
-                            <input type="text" id="signup-firstname" class="form-input" placeholder="Ahmed" autocomplete="given-name" required>
+                            <input type="text" id="signup-firstname" class="form-input" placeholder="Ahmed" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label"><i class="fas fa-user"></i> Last Name</label>
-                            <input type="text" id="signup-lastname" class="form-input" placeholder="Mohammed" autocomplete="family-name" required>
+                            <input type="text" id="signup-lastname" class="form-input" placeholder="Mohammed" required>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-envelope"></i> Email Address</label>
-                        <input type="email" id="signup-email" class="form-input" placeholder="your@email.com" autocomplete="email" required>
+                        <input type="email" id="signup-email" class="form-input" placeholder="your@email.com" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-lock"></i> Password</label>
                         <div class="password-wrap">
-                            <input type="password" id="signup-password" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password" required oninput="checkPasswordStrength(this.value)">
+                            <input type="password" id="signup-password" class="form-input" placeholder="Min. 8 characters" required oninput="checkPasswordStrength(this.value)">
                             <button class="password-eye" type="button" onclick="togglePassword('signup-password', this)">
                                 <i class="fas fa-eye"></i>
                             </button>
@@ -170,9 +217,45 @@
                             <span id="strength-label">Enter a password</span>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-graduation-cap"></i> Study Level</label>
+                        <select id="signup-level" class="form-input form-select">
+                            <option value="">Select your level</option>
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                            <option value="expert">Expert</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-university"></i> Faculty / College</label>
+                        <select id="signup-faculty" class="form-input form-select">
+                            <option value="">Select your faculty</option>
+                            <option value="Computer Science">Computer Science</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Medicine">Medicine</option>
+                            <option value="Business">Business</option>
+                            <option value="Law">Law</option>
+                            <option value="Science">Science</option>
+                            <option value="Education">Education</option>
+                            <option value="Arts">Arts</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="Economics">Economics</option>
+                            <option value="Architecture">Architecture</option>
+                            <option value="Agriculture">Agriculture</option>
+                            <option value="Pharmacy">Pharmacy</option>
+                            <option value="Dentistry">Dentistry</option>
+                            <option value="Nursing">Nursing</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-book"></i> Specialization / Department</label>
+                        <input type="text" id="signup-specialization" class="form-input" placeholder="e.g. Software Engineering, General Medicine..." maxlength="80">
+                    </div>
                     <label class="terms-check">
                         <input type="checkbox" id="terms-agree">
-                        I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a>
+                        I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
                     </label>
                     <button class="btn-auth-submit" id="signup-btn" onclick="handleSignup()">
                         <span><i class="fas fa-rocket"></i> Create Free Account</span>
@@ -181,79 +264,68 @@
                     <p class="auth-switch-text">Already have an account? <a onclick="switchTab('login')">Sign in</a></p>
                 </div>
 
-                <!-- RESET PASSWORD FORM -->
-                <div class="auth-form-container" id="reset-form" style="display:none">
-                    <div class="auth-form-header">
-                        <h2>Reset Password</h2>
-                        <p>We'll email you a secure reset link</p>
-                    </div>
-                    <div id="reset-error" class="auth-error" style="display:none"></div>
-                    <div id="reset-success" class="auth-success" style="display:none"></div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
-                        <input type="email" id="reset-email" class="form-input" placeholder="your@email.com" autocomplete="email">
-                    </div>
-                    <button class="btn-auth-submit" id="reset-btn" onclick="handleReset()">
-                        <span><i class="fas fa-paper-plane"></i> Send Reset Link</span>
-                        <div class="btn-loader" style="display:none"><i class="fas fa-spinner fa-spin"></i></div>
-                    </button>
-                    <p class="auth-switch-text">Remembered it? <a onclick="switchTab('login')">Back to sign in</a></p>
-                </div>
-
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="lib/supabase-client.js"></script>
+    <script src="oauth-config.js"></script>
+    <script src="platform.js"></script>
     <script>
-        // ---- Theme (self-contained; no platform.js on auth page) ----
-        (function () {
-            let t = localStorage.getItem('eduai_theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', t);
-            document.addEventListener('DOMContentLoaded', () => {
-                const btn = document.getElementById('theme-toggle');
-                const icon = document.getElementById('theme-icon');
-                if (icon) icon.className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
-                if (btn) btn.addEventListener('click', () => {
-                    t = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
-                    document.documentElement.setAttribute('data-theme', t);
-                    localStorage.setItem('eduai_theme', t);
-                    if (icon) icon.className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
-                });
-            });
-        })();
-
-        const cfgOk = (function () {
-            const c = window.EDUAI_SUPABASE_CONFIG || {};
-            return !!(c.url && c.anonKey && c.url.indexOf('YOUR-PROJECT') === -1);
-        })();
-
-        function show(id, msg) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.textContent = msg;
-            el.style.display = 'flex';
-        }
-        function hide(...ids) { ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
-
         // Tab switching
         function switchTab(tab) {
-            const map = { login: 'login-form', signup: 'signup-form', reset: 'reset-form' };
-            Object.keys(map).forEach(k => {
-                const el = document.getElementById(map[k]);
-                if (el) el.style.display = (k === tab) ? 'block' : 'none';
-            });
-            const tabs = document.getElementById('auth-tabs');
-            if (tabs) tabs.style.display = (tab === 'reset') ? 'none' : 'flex';
-            document.getElementById('login-tab').classList.toggle('active', tab === 'login');
-            document.getElementById('signup-tab').classList.toggle('active', tab === 'signup');
-            hide('login-error', 'signup-error', 'signup-success', 'reset-error', 'reset-success');
+            const isLogin = tab === 'login';
+            document.getElementById('login-form').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('signup-form').style.display = isLogin ? 'none' : 'block';
+            document.getElementById('login-tab').classList.toggle('active', isLogin);
+            document.getElementById('signup-tab').classList.toggle('active', !isLogin);
         }
 
+        // Check URL param
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'signup') switchTab('signup');
+
+        // Role selection — handles 3 tiers
+        let currentRole = { login: 'student', signup: 'student' };
+        function selectRole(role, form) {
+            currentRole[form] = role;
+
+            // Toggle active state on all buttons for this form
+            ['student', 'teacher', 'admin'].forEach(r => {
+                const btn = document.getElementById(`${r}-role-${form}`);
+                if (btn) btn.classList.toggle('active', r === role);
+            });
+
+            // Admin button accent
+            const adminBtn = document.getElementById(`admin-role-${form}`);
+            if (adminBtn) {
+                adminBtn.style.background   = role === 'admin' ? 'rgba(239,68,68,0.15)' : '';
+                adminBtn.style.borderColor  = role === 'admin' ? '#ef4444' : 'rgba(239,68,68,0.3)';
+            }
+
+            // Login form: toggle standard vs admin fields
+            if (form === 'login') {
+                const stdFields   = document.getElementById('login-standard-fields');
+                const adminFields = document.getElementById('login-admin-fields');
+                const btnText     = document.getElementById('login-btn-text');
+
+                if (role === 'admin') {
+                    stdFields.style.display   = 'none';
+                    adminFields.style.display  = 'block';
+                    if (btnText) btnText.innerHTML = '<i class="fas fa-user-shield"></i> Admin Sign In';
+                    // Clear standard fields for safety
+                    document.getElementById('login-email').value    = '';
+                    document.getElementById('login-password').value = '';
+                    setTimeout(() => document.getElementById('admin-username').focus(), 80);
+                } else {
+                    stdFields.style.display   = '';
+                    adminFields.style.display  = 'none';
+                    if (btnText) btnText.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                    // Clear admin fields for safety
+                    document.getElementById('admin-username').value  = '';
+                    document.getElementById('admin-password').value  = '';
+                }
+            }
+        }
 
         // Password visibility
         function togglePassword(inputId, btn) {
@@ -291,141 +363,259 @@
             label.style.color = lvl.color;
         }
 
-        function showBtnLoader(btnId) {
-            const btn = document.getElementById(btnId);
-            if (!btn) return;
-            const span = btn.querySelector('span');
-            const loader = btn.querySelector('.btn-loader');
-            if (span) span.style.display = 'none';
-            if (loader) loader.style.display = 'block';
-            btn.disabled = true;
-        }
-        function resetBtn(btnId) {
-            const btn = document.getElementById(btnId);
-            if (!btn) return;
-            const span = btn.querySelector('span');
-            const loader = btn.querySelector('.btn-loader');
-            if (span) span.style.display = '';
-            if (loader) loader.style.display = 'none';
-            btn.disabled = false;
-        }
+        // ── Admin brute-force lockout state ──────────────────────
+        const ADMIN_MAX_ATTEMPTS = 3;
+        const ADMIN_LOCKOUT_MS   = 5 * 60 * 1000; // 5 minutes
 
-        function routeByRole(profile, next) {
-            const dest = next || (profile.role === 'admin' ? 'admin.html'
-                : profile.role === 'instructor' ? 'instructor.html'
-                : profile.onboarding_complete ? 'dashboard.html' : 'onboarding.html');
-            window.location.replace(dest);
+        function _getAdminLockout() {
+            try { return JSON.parse(sessionStorage.getItem('_adm_lk') || '{"attempts":0,"lockedUntil":0}'); }
+            catch(e) { return { attempts: 0, lockedUntil: 0 }; }
         }
-
-        function requireConfig() {
-            if (!cfgOk) {
-                show('login-error', '⚠️ Authentication is not configured yet. Please set supabase-config.js.');
-                return false;
-            }
-            return true;
-        }
+        function _saveAdminLockout(obj) { sessionStorage.setItem('_adm_lk', JSON.stringify(obj)); }
+        function _resetAdminLockout()  { sessionStorage.removeItem('_adm_lk'); }
 
         // Handle Login
         function handleLogin() {
-            if (!requireConfig()) return;
-            hide('login-error');
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            if (!email || !password) { show('login-error', 'Please fill in all fields.'); return; }
+            const errEl = document.getElementById('login-error');
+            errEl.style.display = 'none';
 
-            showBtnLoader('login-btn');
-            window.EduAIAuth.signIn(email, password)
-                .then(() => window.EduAIAuth.getProfile())
-                .then(profile => {
-                    if (!profile) throw new Error('Your account has no profile. Contact support.');
-                    if (profile.status === 'suspended') throw new Error('This account is suspended.');
-                    window.EduAIAuth.logEvent('login');
-                    routeByRole(profile, urlParams.get('next'));
-                })
-                .catch(err => {
-                    resetBtn('login-btn');
-                    const msg = (err && err.message) ? err.message : 'Sign in failed.';
-                    show('login-error', /invalid/i.test(msg) ? 'Invalid email or password.' : msg);
+            // ── ADMIN AUTHENTICATION PATH ────────────────────────────
+            if (currentRole.login === 'admin') {
+                const lk = _getAdminLockout();
+
+                // ① Lockout check — is the admin panel still locked?
+                if (lk.lockedUntil && Date.now() < lk.lockedUntil) {
+                    const secsLeft = Math.ceil((lk.lockedUntil - Date.now()) / 1000);
+                    const mins = Math.floor(secsLeft / 60);
+                    const secs = secsLeft % 60;
+                    errEl.innerHTML = `🔒 Too many failed attempts. Admin access locked for <strong>${mins}m ${secs}s</strong>.`;
+                    errEl.style.display = 'flex';
+                    document.getElementById('admin-username').value = '';
+                    document.getElementById('admin-password').value = '';
+                    return;
+                }
+
+                const adminUser = document.getElementById('admin-username').value.trim();
+                const adminPass = document.getElementById('admin-password').value;
+
+                if (!adminUser || !adminPass) {
+                    errEl.textContent = '⛔ Please enter the admin username and password.';
+                    errEl.style.display = 'flex';
+                    return;
+                }
+
+                // ② Hardcoded owner credentials — immutable
+                const _AU = atob('V2ViTmV4dXM=');                  // WebNexus
+                const _AP = atob('V2ViTmV4dXMjMjAyNiFGb3JnZQ=='); // WebNexus#2026!Forge
+
+                if (adminUser !== _AU || adminPass !== _AP) {
+                    // Record failed attempt
+                    lk.attempts = (lk.attempts || 0) + 1;
+                    const remaining = ADMIN_MAX_ATTEMPTS - lk.attempts;
+
+                    if (lk.attempts >= ADMIN_MAX_ATTEMPTS) {
+                        lk.lockedUntil = Date.now() + ADMIN_LOCKOUT_MS;
+                        _saveAdminLockout(lk);
+                        errEl.innerHTML = '🔒 <strong>Admin panel locked for 5 minutes</strong> due to too many failed attempts.';
+                    } else {
+                        _saveAdminLockout(lk);
+                        errEl.innerHTML = `⛔ Invalid admin credentials. Access denied. <strong>${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.</strong>`;
+                    }
+
+                    errEl.style.display = 'flex';
+                    // Always wipe both inputs on failure
+                    document.getElementById('admin-username').value = '';
+                    document.getElementById('admin-password').value = '';
+                    setTimeout(() => document.getElementById('admin-username').focus(), 80);
+                    return;
+                }
+
+                // ③ Credentials correct — reset lockout counter
+                _resetAdminLockout();
+
+                // Build the persistent admin session object
+                const adminObj = {
+                    name:     'WebNexus',
+                    username: 'WebNexus',
+                    email:    'admin@webnexus.local',
+                    role:     'admin',
+                    level:    'expert',
+                    xp:       0,
+                    streak:   0,
+                    badges:   [],
+                    joinDate: new Date().toISOString()
+                };
+
+                // Upsert admin into the users store
+                let users = JSON.parse(localStorage.getItem('eduai_users') || '[]');
+                const existingIdx = users.findIndex(u => u.email === adminObj.email);
+                if (existingIdx >= 0) {
+                    users[existingIdx] = { ...users[existingIdx], role: 'admin' };
+                } else {
+                    users.push(adminObj);
+                }
+                localStorage.setItem('eduai_users', JSON.stringify(users));
+                localStorage.setItem('eduai_current_user', JSON.stringify(adminObj));
+
+                const btnText = document.getElementById('login-btn-text');
+                if (btnText) btnText.innerHTML = '<i class="fas fa-user-shield"></i> Accessing Admin Panel...';
+                showBtnLoader('login-btn');
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+                return;
+            }
+
+            // ── STUDENT / TEACHER AUTHENTICATION PATH ────────────────
+            const email    = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                errEl.textContent = 'Please fill in all fields.';
+                errEl.style.display = 'flex';
+                return;
+            }
+
+            // ④ Block the admin username from ever being used on the student/teacher path
+            const _AU2 = atob('V2ViTmV4dXM='); // WebNexus
+            if (
+                email.toLowerCase() === _AU2.toLowerCase() ||
+                email.toLowerCase() === 'admin@webnexus.local' ||
+                email.toLowerCase() === 'webnexus'
+            ) {
+                errEl.textContent = '⛔ This account requires admin credentials. Please use the Admin login.';
+                errEl.style.display = 'flex';
+                return;
+            }
+
+            // ⑤ Look up registered users — MUST match both email AND password
+            let users = JSON.parse(localStorage.getItem('eduai_users') || '[]');
+            let user = users.find(u =>
+                ((u.email && u.email.toLowerCase() === email.toLowerCase()) ||
+                 (u.username && u.username.toLowerCase() === email.toLowerCase()))
+            );
+
+            if (!user) {
+                // New user — auto-register with the credentials they typed
+                user = {
+                    name:     email.split('@')[0] || 'User',
+                    email:    email,
+                    password: password,
+                    role:     currentRole.login || 'student',
+                    level:    'intermediate',
+                    xp: 0, streak: 0, badges: [],
+                    joinDate: new Date().toISOString()
+                };
+                users.push(user);
+                localStorage.setItem('eduai_users', JSON.stringify(users));
+            } else {
+                // ⑥ Existing user — validate password
+                if (user.password && user.password !== password) {
+                    errEl.textContent = '⛔ Incorrect password. Please try again.';
+                    errEl.style.display = 'flex';
                     document.getElementById('login-password').value = '';
-                });
+                    return;
+                }
+            }
+
+            // ⑦ Prevent any stored admin account from being accessed via student path
+            if ((user.role || 'student') === 'admin') {
+                errEl.textContent = '⛔ This account requires admin credentials. Please use the Admin login.';
+                errEl.style.display = 'flex';
+                return;
+            }
+
+            localStorage.setItem('eduai_current_user', JSON.stringify(user));
+            showBtnLoader('login-btn');
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
         }
 
-        // Handle Signup — public signup is ALWAYS a student (enforced by the DB)
+        // Handle Signup
+
         function handleSignup() {
-            if (!requireConfig()) return;
-            hide('signup-error', 'signup-success');
             const firstName = document.getElementById('signup-firstname').value.trim();
             const lastName = document.getElementById('signup-lastname').value.trim();
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
+            const level = document.getElementById('signup-level').value;
             const terms = document.getElementById('terms-agree').checked;
+            const errEl = document.getElementById('signup-error');
+            const successEl = document.getElementById('signup-success');
+            errEl.style.display = 'none';
+            successEl.style.display = 'none';
 
-            if (!firstName || !lastName || !email || !password) { show('signup-error', 'Please fill in all required fields.'); return; }
-            if (password.length < 8) { show('signup-error', 'Password must be at least 8 characters.'); return; }
-            if (!terms) { show('signup-error', 'Please agree to the Terms of Service.'); return; }
+            if (!firstName || !lastName || !email || !password) {
+                errEl.textContent = 'Please fill in all required fields.';
+                errEl.style.display = 'flex'; return;
+            }
+            if (password.length < 8) {
+                errEl.textContent = 'Password must be at least 8 characters.';
+                errEl.style.display = 'flex'; return;
+            }
+            if (!terms) {
+                errEl.textContent = 'Please agree to the Terms of Service.';
+                errEl.style.display = 'flex'; return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('eduai_users') || '[]');
+            if (users.find(u => u.email === email)) {
+                errEl.textContent = 'An account with this email already exists.';
+                errEl.style.display = 'flex'; return;
+            }
+
+            const newUser = {
+                name: `${firstName} ${lastName}`,
+                email, password,
+                role: currentRole.signup,
+                level: level || 'beginner',
+                xp: 0, streak: 0, badges: [],
+                joinDate: new Date().toISOString(),
+                topicsProgress: {}
+            };
+            users.push(newUser);
+            localStorage.setItem('eduai_users', JSON.stringify(users));
+            localStorage.setItem('eduai_current_user', JSON.stringify(newUser));
+
+            // Capture academic context (faculty/specialization) into the
+            // authoritative account profile so all modules personalise to it.
+            const faculty = document.getElementById('signup-faculty').value;
+            const specialization = document.getElementById('signup-specialization').value.trim();
+            if (faculty || specialization) {
+                const ctx = {};
+                if (faculty) ctx.faculty = faculty;
+                if (specialization) ctx.specialization = specialization;
+                ctx.level = level || 'beginner';
+                if (window.EduAI && window.EduAI.Profile) {
+                    window.EduAI.Profile.setAcademicContext(ctx);
+                } else {
+                    try {
+                        const u2 = JSON.parse(localStorage.getItem('eduai_current_user') || '{}');
+                        if (faculty) u2.faculty = faculty;
+                        if (specialization) u2.specialization = specialization;
+                        localStorage.setItem('eduai_current_user', JSON.stringify(u2));
+                    } catch (e) {}
+                }
+            }
 
             showBtnLoader('signup-btn');
-            window.EduAIAuth.signUpStudent(email, password, (firstName + ' ' + lastName).trim())
-                .then(data => {
-                    if (data && data.session) {
-                        show('signup-success', '🎉 Account created! Setting up your profile...');
-                        setTimeout(() => window.location.replace('onboarding.html'), 900);
-                    } else {
-                        resetBtn('signup-btn');
-                        show('signup-success', '📧 Almost there! Check your email to verify your address, then sign in.');
-                    }
-                })
-                .catch(err => {
-                    resetBtn('signup-btn');
-                    const msg = (err && err.message) ? err.message : 'Sign up failed.';
-                    show('signup-error', /already|registered|exists/i.test(msg) ? 'An account with this email already exists.' : msg);
-                });
+            successEl.textContent = '🎉 Account created! Redirecting...';
+            successEl.style.display = 'flex';
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
         }
 
-        // Handle password reset request
-        function handleReset() {
-            if (!requireConfig()) return;
-            hide('reset-error', 'reset-success');
-            const email = document.getElementById('reset-email').value.trim();
-            if (!email) { show('reset-error', 'Please enter your email.'); return; }
-            showBtnLoader('reset-btn');
-            window.EduAIAuth.sendReset(email)
-                .then(() => {
-                    resetBtn('reset-btn');
-                    show('reset-success', '📧 If that email exists, a reset link is on its way.');
-                })
-                .catch(err => {
-                    resetBtn('reset-btn');
-                    show('reset-error', (err && err.message) || 'Could not send reset email.');
-                });
+        function showBtnLoader(btnId) {
+            const btn = document.getElementById(btnId);
+            btn.querySelector('span').style.display = 'none';
+            btn.querySelector('.btn-loader').style.display = 'block';
+            btn.disabled = true;
         }
 
-        // Social sign-in (providers must be enabled in the Supabase dashboard)
-        function handleOAuth(provider) {
-            if (!requireConfig()) return;
-            if (urlParams.get('next')) sessionStorage.setItem('eduai.next', urlParams.get('next'));
-            window.EduAIAuth.signInWithOAuth(provider).catch(err => {
-                show('login-error', (err && err.message) || 'Social sign-in unavailable.');
-            });
-        }
-
-        // Enter key
+        // Enter key handlers
         document.addEventListener('keydown', e => {
-            if (e.key !== 'Enter') return;
-            const loginVisible = document.getElementById('login-form').style.display !== 'none';
-            const signupVisible = document.getElementById('signup-form').style.display !== 'none';
-            if (loginVisible) handleLogin();
-            else if (signupVisible) handleSignup();
+            if (e.key === 'Enter') {
+                const loginVisible = document.getElementById('login-form').style.display !== 'none';
+                if (loginVisible) handleLogin();
+                else handleSignup();
+            }
         });
-
-        // If already signed in, route immediately.
-        (function () {
-            if (!cfgOk) return;
-            window.EduAIAuth.getSession().then(s => {
-                if (!s) return;
-                window.EduAIAuth.getProfile().then(profile => { if (profile) routeByRole(profile, urlParams.get('next')); });
-            });
-        })();
     </script>
 </body>
 </html>
